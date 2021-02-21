@@ -1,0 +1,25 @@
+remote_theme: carlosperate/jekyll-theme-rtd
+
+markdown: kramdown
+
+# File exclusions
+exclude:
+- Gemfile
+- Gemfile.lock
+
+# Site settings
+url: 'https://sagerpascal.github.io/temporal-speech-context/'
+baseurl: '/temporal-speech-context'
+title: 'Temporal Speech Context'
+description: 'A neural network to predict a frame of speech (MFCC) from its predecessor'
+
+
+# Theme settings:
+site_author: Pascal Sager
+repo_url: "https://github.com/sagerpascal/temporal-speech-context"
+edit_on_github: true
+github_docs_folder: true
+sticky_navigation: true
+prev_next_buttons_location: bottom
+search_enabled: true
+hljs_style: github-gist

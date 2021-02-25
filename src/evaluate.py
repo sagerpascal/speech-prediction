@@ -47,32 +47,40 @@ def calc_metrics(conf, loader_test, model, metrics):
 
 def plot_one_predicted_batch(conf, loader_test, model):
     it_loader_test = iter(loader_test)
-    x, y, _, original, _ = next(it_loader_test)
+    x, y, _, original, waveform = next(it_loader_test)
+    x, y, _, original, waveform = next(it_loader_test)
+    x, y, _, original, waveform = next(it_loader_test)
+    x, y, _, original, waveform = next(it_loader_test)
+    x, y, _, original, waveform = next(it_loader_test)
+    x, y, _, original, waveform = next(it_loader_test)
+    x, y, _, original, waveform = next(it_loader_test)
+    x, y, _, original, waveform = next(it_loader_test)
+    x, y, _, original, waveform = next(it_loader_test)
 
     x_t, y_t = x.to(conf['device']), y.to(conf['device'])
 
     with torch.no_grad():
         y_pred = model.forward(x_t, y_t)
 
-    for i in range(x.shape[2]):
-        data_orig = original[i].squeeze().numpy()
-        data_network = x[:, i, :].squeeze().t().numpy()
-        label_gt = y[:, i, :].squeeze().t().numpy()
-        label_pr = y_pred[:, i, :].squeeze().t().cpu().numpy()
+    i=0
+    data_orig = original[i].squeeze().numpy()
+    data_network = x[:, i, :].squeeze().t().numpy()
+    label_gt = y[:, i, :].squeeze().t().numpy()
+    label_pr = y_pred[:, i, :].squeeze().t().cpu().numpy()
 
-        vmin, vmax = np.min(data_orig), np.max(data_orig)
+    vmin, vmax = np.min(data_orig), np.max(data_orig)
 
-        fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(15, 15))
-        axs[0, 0].imshow(data_orig, origin='lower', vmin=vmin, vmax=vmax)
-        axs[0, 0].set_title("Original Data")
-        axs[0, 1].imshow(data_network, origin='lower', vmin=vmin, vmax=vmax)
-        axs[0, 1].set_title("Input Data")
-        axs[1, 0].imshow(label_gt, origin='lower', vmin=vmin, vmax=vmax)
-        axs[1, 0].set_title("Groud Truth")
-        axs[1, 1].imshow(label_pr, origin='lower', vmin=vmin, vmax=vmax)
-        axs[1, 1].set_title("Prediction")
-        plt.tight_layout()
-        plt.show()
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(15, 15))
+    axs[0, 0].imshow(data_orig, origin='lower', vmin=vmin, vmax=vmax)
+    axs[0, 0].set_title("Original Data")
+    axs[0, 1].imshow(data_network, origin='lower', vmin=vmin, vmax=vmax)
+    axs[0, 1].set_title("Input Data")
+    axs[1, 0].imshow(label_gt, origin='lower', vmin=vmin, vmax=vmax)
+    axs[1, 0].set_title("Groud Truth")
+    axs[1, 1].imshow(label_pr, origin='lower', vmin=vmin, vmax=vmax)
+    axs[1, 1].set_title("Prediction")
+    plt.tight_layout()
+    plt.show()
 
 
 def play_audio_files(conf, loader_test, model):
@@ -81,20 +89,30 @@ def play_audio_files(conf, loader_test, model):
         from librosa.feature.inverse import mfcc_to_audio
         import time
         import random
-
+        import scipy.io.wavfile
 
         it_loader_test = iter(loader_test)
 
         # select a random batch between 1 and 10
-        for _ in range(random.randint(1, 10)):
-            x, y, _, original, waveform = next(it_loader_test)
+        # for _ in range(random.randint(1, 10)):
+        #     x, y, _, original, waveform = next(it_loader_test)
+
+        x, y, _, original, waveform = next(it_loader_test)
+        x, y, _, original, waveform = next(it_loader_test)
+        x, y, _, original, waveform = next(it_loader_test)
+        x, y, _, original, waveform = next(it_loader_test)
+        x, y, _, original, waveform = next(it_loader_test)
+        x, y, _, original, waveform = next(it_loader_test)
+        x, y, _, original, waveform = next(it_loader_test)
+        x, y, _, original, waveform = next(it_loader_test)
+        x, y, _, original, waveform = next(it_loader_test)
 
         with torch.no_grad():
             x_t, y_t = x.to(conf['device']), y.to(conf['device'])
             y_pred = model.forward(x_t, y_t)
 
         # only use one example from batch -> select a random batch
-        random_idx = random.randint(0, len(waveform)-1)
+        random_idx = 0  # random.randint(0, len(waveform)-1)
         while not np.all(x[:, random_idx, :].cpu().numpy()[25:54, :] == 0):
             # it works only for a fixed shape so far...
             random_idx = random.randint(0, len(waveform)-1)
@@ -120,22 +138,26 @@ def play_audio_files(conf, loader_test, model):
         print("Playing original sound...")
         time.sleep(0.5)
         sd.play(waveform.T, 16000, blocking=True)
+        # scipy.io.wavfile.write('waveform.wav', 16000, waveform.T.numpy())
 
         print("Playing MFCC of original sound...")
         time.sleep(0.5)
         sd.play(mfcc_to_audio(original), 16000, blocking=True)
+        # scipy.io.wavfile.write('MFCC.wav', 16000, mfcc_to_audio(original))
 
         print("Input (masked) signal...")
         time.sleep(0.5)
         sd.play(mfcc_to_audio(x.T), 16000, blocking=True)
+        # scipy.io.wavfile.write('MFCC_cropped.wav', 16000, mfcc_to_audio(x.T))
 
         print("Playing reconstructed signal...")
         time.sleep(0.5)
         sd.play(mfcc_to_audio(reconstructed), 16000, blocking=True)
+        # scipy.io.wavfile.write('MFCC_reconstructed.wav', 16000, mfcc_to_audio(reconstructed))
 
         print("Playing MFCC of original sound...")
         time.sleep(0.5)
-        sd.play(mfcc_to_audio(reconstructed_orig), 16000, blocking=True)
+        # sd.play(mfcc_to_audio(reconstructed_orig), 16000, blocking=True)
 
 
     else:

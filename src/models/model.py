@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .transformer import SpeechTransformer
+from .transformer.sublayers import VGGExtractor
 
 # mit TIMIT: https://github.com/hirofumi0810/neural_sp
 # mit TIMIT: https://github.com/okkteam/Transformer-Transducer
@@ -52,14 +53,26 @@ class M5(nn.Module):
 
 def get_model(conf, n_input, n_output):
     if 'load_model' in conf and conf['load_model'] != 'None':
-        model = torch.load("../../trained_models/{}.pth".format(conf['load_model']),
-                           map_location=torch.device(conf['device']))
+        try:
+            model = torch.load("data/trained_models/{}.pth".format(conf['load_model']),
+                               map_location=torch.device(conf['device']))
+        except FileNotFoundError:
+            model = torch.load("../data/trained_models/{}.pth".format(conf['load_model']),
+                               map_location=torch.device(conf['device']))
+
     else:
         # model = M5(n_input=n_input, n_output=n_output)
         # model = SpeechTransformer(num_classes=35, d_model=512, num_heads=8, input_dim=40, extractor='vgg')
 
         # use a smaller model...
-        model = SpeechTransformer(num_classes=35, d_model=64, num_heads=2, input_dim=40, extractor='vgg', num_encoder_layers=3, num_decoder_layers=3)
+        # TODO: nume_classes=35 for classification
+        # model = SpeechTransformer(num_classes=40*40, d_model=1600, num_heads=2, input_dim=40, extractor='vgg', num_encoder_layers=3, num_decoder_layers=3)
+
+        custom_encoder = VGGExtractor()
+        model = torch.nn.Transformer(d_model=512, custom_encoder=custom_encoder) # d_model=40 if without encoder
+
+        print(model)
+        print("Model has {} parameters".format(count_parameters(model)))
 
     if 'cpu' in conf['device'] and isinstance(model, torch.nn.DataParallel):
         model = model.module

@@ -14,5 +14,10 @@ def setup_logging():
 
 
 def setup_wandb():
-    return wandb.init(project="ASR temporal context", entity="ASR", job_type='train')
+    return wandb.init(project="ASR temporal context", job_type='train')
 
+def format_logs( logs):
+    """ format logs in tqdm """
+    str_logs = ['{} - {:.4}'.format(k, v) for k, v in logs.items()]
+    s = ', '.join(str_logs)
+    return s

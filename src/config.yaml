@@ -1,15 +1,16 @@
-mode: train # either train or evaluate
+mode: eval # either train or eval
 dataset: torch-speech-commands
 use_wandb: False
 
 # Training settings
+batch_size: 128
 max_number_of_epochs: 30
 early_stopping: False
 
 # LR Scheduler
 use_lr_scheduler: False
-scheduler_step_size: 20
-scheduler_gamma: 0.1
+scheduler_step_size: 10
+scheduler_gamma: 0.3
 
 # Optimizer
 optimizer: adam

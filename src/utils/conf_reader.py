@@ -3,7 +3,13 @@ import argparse
 import torch
 
 def get_config():
-    conf_file = yaml.load(open('src/config.yaml'), Loader=yaml.FullLoader)
+    try:
+        conf_file = yaml.load(open('config.yaml'), Loader=yaml.FullLoader)
+    except FileNotFoundError:
+        try:
+            conf_file = yaml.load(open('../config.yaml'), Loader=yaml.FullLoader)
+        except FileNotFoundError:
+            conf_file = yaml.load(open('src/config.yaml'), Loader=yaml.FullLoader)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 

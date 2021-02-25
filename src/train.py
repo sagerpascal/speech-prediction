@@ -14,8 +14,15 @@ from metrics import get_metrics
 from models.model import get_model
 from optimizer import get_optimizer, optimizer_to
 from utils.meter import AverageValueMeter
+from utils.log import format_logs
 
 logger = logging.getLogger(__name__)
+
+
+# TODO's:
+# cleanup code
+# Study mask of transformers -> can they be used to mask a certain area?
+# use torchaudio.functional.mask_along_axis to mask a certain area instead of own implementation
 
 
 class Epoch:
@@ -36,10 +43,6 @@ class Epoch:
         for m in self.metrics:
             m.to(device)
 
-    def _format_logs(self, logs):
-        str_logs = ['{} - {:.4}'.format(k, v) for k, v in logs.items()]
-        s = ', '.join(str_logs)
-        return s
 
     def batch_update(self, x, y, input_lengths=None):
         raise NotImplementedError
@@ -50,14 +53,18 @@ class Epoch:
     def run(self, dataloader_):
         self.on_epoch_start()
 
+
         logs = {}
         loss_meter = AverageValueMeter()
         metrics_meters = {metric.__name__: AverageValueMeter() for metric in self.metrics}
         transform = torchaudio.transforms.Resample(orig_freq=16000, new_freq=8000)  # TODO: change depending on dataset
 
         with tqdm(dataloader_, desc=self.stage_name, file=sys.stdout, disable=not self.verbose) as iterator:
-            for x, y, length in iterator:
-                x, y, length = x.to(self.conf['device']), y.to(self.conf['device']), length.to(self.conf['device']) # TODO: length only with transformer
+            for x, y, length, _, _ in iterator:
+                x, y = x.to(self.conf['device']), y.to(self.conf['device'])
+
+                if length is not None:
+                    length = length.to(self.conf['device']) # TODO: length only with custom transformer
 
                 # x = transform(x) TODO: not with MFCC
 
@@ -78,7 +85,7 @@ class Epoch:
                 logs.update(metrics_logs)
 
                 if self.verbose:
-                    s = self._format_logs(logs)
+                    s = format_logs(logs)
                     iterator.set_postfix_str(s)
 
         return logs
@@ -102,8 +109,10 @@ class TrainEpoch(Epoch):
 
     def batch_update(self, x, y, input_lengths=None):
         self.optimizer.zero_grad()
-        output, encoder_log_probs, input_lengths = self.model.forward(x, input_lengths, y) # TODO length?!
-        loss = torch.nn.functional.cross_entropy(output, y) # self.loss(output, y) # TODO: replace with self.loss and add .squeeze() for M5
+        output = self.model.forward(x, y) # TODO with custom transformer model: output, encoder_log_probs, input_lengths = self.model.forward(x, input_lengths, y)
+        loss = torch.nn.functional.mse_loss(output, y)
+        # TODO: classification with M5            self.loss(output.squeeze(), y)
+        # TODO: classification with transformer:  torch.nn.functional.cross_entropy(output, y)
         loss.backward()
         self.optimizer.step()
         return loss, output
@@ -126,8 +135,9 @@ class ValidEpoch(Epoch):
     def batch_update(self, x, y, input_lengths=None):
         with torch.no_grad():
             # https://datascience.stackexchange.com/questions/81727/what-would-be-the-target-input-for-transformer-decoder-during-test-phase
-            output, encoder_log_probs, input_lengths  = self.model.forward(x, input_lengths, y) # TODO length?!
-            loss = torch.nn.functional.cross_entropy(output, y) # TODO: add .squeeze() for M5
+            # TODO with custom transformer model: output, encoder_log_probs, input_lengths  = self.model.forward(x, input_lengths, y)
+            output = self.model.forward(x, y)
+            loss = torch.nn.functional.mse_loss(output, y)  # TODO: add .squeeze() for M5
         return loss, output
 
 
@@ -144,23 +154,30 @@ def wandb_log_epoch(n_epoch, train_logs, valid_logs):
     logs = {
         'epoch': n_epoch,
     }
-    wandb.log({**logs, **train_logs, **valid_logs})
+    for k, v in train_logs.items():
+        logs[k + " train"] = v
+    for k, v in valid_logs.items():
+        logs[k + " valid"] = v
+    wandb.log(logs)
 
 
 def save_model(model, model_name, save_wandb=False):
-    model_path = '../../trained_models'
+    model_path = '../data/trained_models' if os.path.exists('../data') else 'data/trained_models'
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
-    filename = 'model.pth' if save_wandb else model_name
-    filename = os.path.join(model_path, filename)
-    if os.path.exists(filename):
-        os.remove(filename)
-    torch.save(model, filename)
-
     if save_wandb:
+        filename = 'model.pth'
+        if os.path.exists(filename):
+            os.remove(filename)
+        torch.save(model, filename)
         wandb.save(filename)
         shutil.copy(filename, os.path.join(model_path, '{}.pth'.format(model_name)))
+    else:
+        filename = os.path.join(model_path, '{}.pth'.format(model_name))
+        if os.path.exists(filename):
+            os.remove(filename)
+        torch.save(model, filename)
 
 
 def train(conf):
@@ -202,6 +219,7 @@ def train(conf):
             best_loss = valid_logs['loss']
             model_name = wandb.run.name if conf['use_wandb'] else 'tsc_acf'
             save_model(model, model_name, save_wandb=conf['use_wandb'])
+            logger.info("Model saved (loss={})".format(best_loss))
 
         else:
             count_not_improved += 1
@@ -209,6 +227,7 @@ def train(conf):
         if i % 10 == 0:
             model_name = "{}_backup".format(wandb.run.name) if conf['use_wandb'] else 'model_backup'
             save_model(model, model_name, save_wandb=False)
+            logger.info("Model saved as backup after {} epochs".format(i))
 
         if conf['use_lr_scheduler']:
             lr_scheduler.step(epoch=i)

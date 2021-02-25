@@ -1,0 +1,4 @@
+torchaudio~=0.7.2
+wandb~=0.10.19
+matplotlib~=3.3.4
+pytorch_lightning~=1.2.1

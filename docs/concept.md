@@ -45,7 +45,7 @@ The application is still under development. So far, only a proof of concept has 
 
 3. This masked signal is fed into a transformer network which was trained to predict the masked part. If the (masked)
    input signal is composed with the prediction, the signal can be reconstructed (the masked part of the signal is
-   replaced with the predicted part from the transformer network):
+   replaced with prediction from the transformer network):
    <p align="center">
       <img src="assets/concept/mfcc_reconstructed.png" alt="MFCC of the Waveform" width="50%" />
       <br>
@@ -56,7 +56,7 @@ The application is still under development. So far, only a proof of concept has 
       </audio>
       <br>
       <br>
-      <i>This signal was predicted by the network.</i>
+      <i>This is the MFCC signal, predicted by the network.</i>
    </p>
    
 

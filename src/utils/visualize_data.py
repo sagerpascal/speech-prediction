@@ -1,9 +1,8 @@
 import matplotlib.pyplot as plt
-import sys
-from tqdm.auto import tqdm
-from utils.conf_reader import get_config
-from dataloader import get_loaders
 import numpy as np
+
+from dataloader import get_loaders
+from utils.conf_reader import get_config
 
 
 def plot_data_examples():
@@ -18,7 +17,7 @@ def plot_data_examples():
 
     for i in range(x.shape[2]):
         data_orig = original[i].squeeze().numpy()
-        data_network = x[:,i,:].squeeze().t().numpy()
+        data_network = x[:, i, :].squeeze().t().numpy()
         label = y[:, i, :].squeeze().t().numpy()
 
         min, max = np.min(data_orig), np.max(data_orig)
@@ -38,11 +37,3 @@ def plot_data_examples():
 
 if __name__ == '__main__':
     plot_data_examples()
-
-
-
-
-
-
-
-

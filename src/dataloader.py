@@ -1,6 +1,8 @@
-import torch
+import platform
 
-from datasets.torch_speech_commands import SubsetSC, collate_fn, label_to_index
+from torch.utils.data import DataLoader
+
+from datasets.torch_speech_commands import SubsetSC, collate_fn
 
 
 def _get_torch_speech_commands(conf):
@@ -10,58 +12,41 @@ def _get_torch_speech_commands(conf):
     val_set = SubsetSC("validation")
     test_set = SubsetSC("testing")
 
-
-    # TODO: only for classification needed
-    classification = False
-    train_labels = sorted(list(set(datapoint[2] for datapoint in train_set))) if classification else None
-    val_labels = sorted(list(set(datapoint[2] for datapoint in val_set))) if classification else None
-    test_labels = sorted(list(set(datapoint[2] for datapoint in test_set))) if classification else None
-    train_collate_fn = collate_fn(label_to_index, train_labels)
-    val_collate_fn = collate_fn(label_to_index, val_labels)
-    test_collate_fn = collate_fn(label_to_index, test_labels)
-
     if "cuda" in conf['device']:
-        num_workers = 0  # TODO: set to >=1 if not Windows
+        num_workers = 0 if platform.system() == "Windows" else 2
         pin_memory = True
     else:
         num_workers = 0
         pin_memory = False
 
-    train_loader = torch.utils.data.DataLoader(
+    train_loader = DataLoader(
         train_set,
         batch_size=conf['batch_size'],
         shuffle=True,
-        collate_fn=train_collate_fn,
+        collate_fn=collate_fn(),
         num_workers=num_workers,
         pin_memory=pin_memory,
     )
-    val_loader = torch.utils.data.DataLoader(
+    val_loader = DataLoader(
         val_set,
         batch_size=conf['batch_size'],
         shuffle=False,
         drop_last=False,
-        collate_fn=val_collate_fn,
+        collate_fn=collate_fn(),
         num_workers=num_workers,
         pin_memory=pin_memory,
     )
-    test_loader = torch.utils.data.DataLoader(
+    test_loader = DataLoader(
         test_set,
         batch_size=conf['batch_size'],
         shuffle=False,
         drop_last=False,
-        collate_fn=test_collate_fn,
+        collate_fn=collate_fn(),
         num_workers=num_workers,
         pin_memory=pin_memory,
     )
 
-    if classification:
-        assert len(train_labels) == len(val_labels)
-        assert len(val_labels) == len(test_labels)
-
-    n_input = 1 if classification else None
-    n_output = len(train_labels) if classification else None
-
-    return train_loader, val_loader, test_loader, n_input, n_output
+    return train_loader, val_loader, test_loader
 
 
 def get_loaders(conf):
@@ -69,3 +54,20 @@ def get_loaders(conf):
         return _get_torch_speech_commands(conf)
     else:
         raise AttributeError("Unknown dataset: {}".format(conf['dataset']))
+
+
+
+if __name__ == '__main__':
+    import torchaudio
+    import sounddevice as sd
+    from librosa.feature.inverse import mfcc_to_audio
+    train_set = SubsetSC("training")
+    data = train_set[1]
+    waveform = data[0]
+    mfcc_transf = torchaudio.transforms.MFCC(melkwargs={"hop_length": 512})
+    mfcc = mfcc_transf(waveform).numpy().squeeze()
+    sd.play(waveform.T, 16000, blocking=True)
+    sd.play(mfcc_to_audio(mfcc, norm='ortho').T, 16000, blocking=True)
+
+
+

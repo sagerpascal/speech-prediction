@@ -57,16 +57,13 @@ class Epoch:
         logs = {}
         loss_meter = AverageValueMeter()
         metrics_meters = {metric.__name__: AverageValueMeter() for metric in self.metrics}
-        transform = torchaudio.transforms.Resample(orig_freq=16000, new_freq=8000)  # TODO: change depending on dataset
 
         with tqdm(dataloader_, desc=self.stage_name, file=sys.stdout, disable=not self.verbose) as iterator:
             for x, y, length, _, _ in iterator:
                 x, y = x.to(self.conf['device']), y.to(self.conf['device'])
 
                 if length is not None:
-                    length = length.to(self.conf['device']) # TODO: length only with custom transformer
-
-                # x = transform(x) TODO: not with MFCC
+                    length = length.to(self.conf['device'])  # TODO: length only with custom transformer
 
                 # train the network with one batch
                 loss, y_pred = self.batch_update(x, y, length)
@@ -109,10 +106,10 @@ class TrainEpoch(Epoch):
 
     def batch_update(self, x, y, input_lengths=None):
         self.optimizer.zero_grad()
-        output = self.model.forward(x, y) # TODO with custom transformer model: output, encoder_log_probs, input_lengths = self.model.forward(x, input_lengths, y)
-        loss = torch.nn.functional.mse_loss(output, y)
-        # TODO: classification with M5            self.loss(output.squeeze(), y)
+        output = self.model.forward(x, y)
+        # TODO with custom transformer model: output, encoder_log_probs, input_lengths = self.model.forward(x, input_lengths, y)
         # TODO: classification with transformer:  torch.nn.functional.cross_entropy(output, y)
+        loss = torch.nn.functional.mse_loss(output, y)
         loss.backward()
         self.optimizer.step()
         return loss, output
@@ -137,7 +134,7 @@ class ValidEpoch(Epoch):
             # https://datascience.stackexchange.com/questions/81727/what-would-be-the-target-input-for-transformer-decoder-during-test-phase
             # TODO with custom transformer model: output, encoder_log_probs, input_lengths  = self.model.forward(x, input_lengths, y)
             output = self.model.forward(x, y)
-            loss = torch.nn.functional.mse_loss(output, y)  # TODO: add .squeeze() for M5
+            loss = torch.nn.functional.mse_loss(output, y)
         return loss, output
 
 
@@ -181,8 +178,8 @@ def save_model(model, model_name, save_wandb=False):
 
 
 def train(conf):
-    loader_train, loader_val, _, n_input, n_output = get_loaders(conf)
-    model = get_model(conf, n_input, n_output)
+    loader_train, loader_val, _ = get_loaders(conf)
+    model = get_model(conf)
     loss = get_loss(conf)
     optimizer = get_optimizer(conf, model)
     optimizer_to(optimizer, conf['device'])

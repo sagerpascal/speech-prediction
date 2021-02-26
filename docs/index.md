@@ -4,41 +4,33 @@ title: Index
 nav_exclude: true
 ---
 
-# Importance of the Temporal Context for Speaker Recognition
+# Modeling Temporal Features of Speech with Sequence Learners for Frame Predictions
 This is the documentation of the repository [https://github.com/sagerpascal/temporal-speech-context](https://github.com/sagerpascal/temporal-speech-context).
 It was created by [Pascal Sager](https://sagerpascal.github.io) as his first project thesis. The project thesis is
 supervised by [Prof. Dr. Thilo Stadelmann](https://stdm.github.io), who is an expert in Deep Learning and very experienced in speaker recognition.
 
 
 ## Description, Problem Definition
-In recent years, there has been significant progress in the field of speech- and speaker-recognition. Thereby, various features 
-are extracted from the audio signals and then analyzed. Stadelmann [1] showed the importance of the temporal context 
-within audio signals. So far, it has been assumed that CNN's capture this temporal context through their receptive 
-field. However, Neururer [2] showed, that CNN's achieve about the same recognition accuracy even it the temporal context 
-is destroyed by mixing the individual frames. This implies that the temporal context is still contained in the audio signals, 
-but not exploited with today's state-of-the-art architectures.
+Recently there has been significant progress in the field of speaker recognition thanks to advances in deep learning. Stadelmann [1] previously showed the importance of the temporal context within the audio signal as a feature. So far [2], it has been assumed that deep learning methods like CNNs and RNNs capture these temporal aspects through their receptive field when operating on spectrograms. However, Neururer [3] showed that they achieve about the same recognition accuracy even when the temporal context is destroyed by shuffling the individual audio frames. This implies that state-of-the-art deep learning architectures do not exploit temporal information properly and potentially do not even model it.
 
-In this project thesis, the temporal context will be investigated. For this purpose, an audio signal is transformed into 
-MFCC frames. Then, a neural network is trained to predict a preceding or following frames for a given MFCC.
-The training may be inspired by modern NLP algorithms, in which a part of the data is masked and then predicted based on 
-it's surrounding. For the evaluation of the predicted frames, appropriate distance metrics must be evaluated. In 
-addition, perception experiments will be conducted in collaboration with the University of Zurich.
+In this project, modeling the temporal context explicitly by deep sequence learning architectures will be investigated. For this purpose, an audio signal is transformed into a sequence of MFCC frames. Then, a neural network is trained to predict preceding or next frame(s) for a given context of MFCCs, inspired by modern NLP methods that are trained on parts of the text to predict surrounding words. As in NLP, the goal of this form of training is to use these models that explicitly learned about temporal context for subsequent tasks like e.g. speaker recognition. The evaluation of the outcomes will rely partially on the performance on such tasks, and on perception experiments to be conducted in collaboration with the University of Zurich (Volker Dellwo's group). Specifically:
 
-The results from this project can show the presence of the temporal context within speech signals. Depending on how many 
-frames can be predicted, the importance of temporal features could be inferred. Based on the results, 
-it can be concluded whether these temporal features should be considered by future ASR research.
-During the project, the student should perform the following tasks:
+- Perform literature research on the current state-of-the-art in modeling temporal features for automatic speaker recognition, especially through context prediction
 
-- perform a literature study on the current state-of-the-art
-- select a baseline approach and adapt it to the given problem space
-- setting up the development environment and train thr neural network
-- Improve and evaluate the network iteratively
-- Assist UZH with perception experiments as necessary
-- Publish a scientific paper in collaboration with ZHAW and UZH (if the circumstances allow)
-- Write a scientific report with focus on motivation, methods, argumentation and results (about 10 pages with sources)
+- Select baseline approach and adapt it to the given problem space
 
+- Set up development environment and train (improve & evaluate) neural networks iteratively
 
-[1] Stadelmann, "Voice Modeling Methods for Automatic Speaker Recognition", [http://archiv.ub.uni-marburg.de/diss/z2010/0465](http://archiv.ub.uni-marburg.de/diss/z2010/0465)
+- Assist UZH staff with perception experiments as necessary
 
-[2] Neururer, ????
+- Publish a scientific paper with ZHAW and UZH researchers (if circumstances allow)
+
+- Write a scientific report with focus on motivation, methods, argumentation, and results (paper style, about 10 pages)
+
+[1] Stadelmann and Freisleben. "Unfolding Speaker Clustering Potential: A Biomimetic Approach". ACM MM'09.
+
+[2] Stadelmann et al. "Capturing Suprasegmental Features of a Voice with RNNs for Improved Speaker Clustering".  ANNPR'18.
+
+[3] Neururer. "Exploiting the Full Information of Varying-Length Utterances for DNN-Based Speaker Verification". Master Thesis, ZHAW, 2020.
+
 

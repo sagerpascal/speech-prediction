@@ -14,7 +14,7 @@ The application is still under development. So far, only a proof of concept has 
 
 1. Different waveforms from
    the [SPEECHCOMMANDS](https://pytorch.org/audio/stable/_modules/torchaudio/datasets/speechcommands.html) dataset are
-   loaded. One command in the dataset is a woman who says "tree":
+   loaded. One command in the dataset is a men who says "eight":
    <p align="center">
       <img src="assets/concept/waveform.png" alt="Waveform of the signal" width="50%" />
       <br>

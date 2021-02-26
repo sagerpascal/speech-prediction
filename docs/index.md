@@ -4,10 +4,10 @@ title: Index
 nav_exclude: true
 ---
 
-# Importance of the Temporal Context for ASR
+# Importance of the Temporal Context for Speaker Recognition
 This is the documentation of the repository [https://github.com/sagerpascal/temporal-speech-context](https://github.com/sagerpascal/temporal-speech-context).
 It was created by [Pascal Sager](https://sagerpascal.github.io) as his first project thesis. The project thesis is
-supervised by [Prof. Dr. Thilo Stadelmann](https://stdm.github.io), who is an expert in Deep Learning and very experienced in ASR.
+supervised by [Prof. Dr. Thilo Stadelmann](https://stdm.github.io), who is an expert in Deep Learning and very experienced in speaker recognition.
 
 
 ## Description, Problem Definition

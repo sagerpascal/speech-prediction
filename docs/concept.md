@@ -85,14 +85,14 @@ The error tends to be slightly larger when more frames are masked (larger $$k$$)
 
 | MAE | MSE |
 |-----|-----|
-| <img src="assets/concept/mae_ex2.png" width="50%" /> | <img src="assets/concept/mse_ex2.png" width="50%" /> | 
+| <img src="assets/concept/mae_ex2.png" /> | <img src="assets/concept/mse_ex2.png" /> | 
 
 
 ###### Standard Deviation per Epoch for Runs with different k
 
 | MAE | MSE |
 |-----|-----|
-| <img src="assets/concept/mae_std_ex2.png" width="50%" /> | <img src="assets/concept/mse_std_ex2.png" width="50%" /> | 
+| <img src="assets/concept/mae_std_ex2.png" /> | <img src="assets/concept/mse_std_ex2.png" /> | 
 
 
 

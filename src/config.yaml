@@ -1,10 +1,21 @@
-mode: eval # either train or eval
-dataset: torch-speech-commands
+mode: train # either train or eval
 use_wandb: False
 
+# Mask MFCC
+mask_pos: end # end, beginning or random
+n_frames: 81
+
+
+data:
+  dataset: torch-speech-commands # torch-speech-commands, TIMIT, VOX2
+  subset: 00_ORIGINAL
+  audio_list_train: 02_train
+  audio_list_val: 03_val
+  dataset_path: /scratch/xnur/DATASETS
+
 # Training settings
-batch_size: 128
-max_number_of_epochs: 30
+batch_size: 64
+max_number_of_epochs: 40
 early_stopping: False
 
 # LR Scheduler

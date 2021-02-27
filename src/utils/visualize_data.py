@@ -11,28 +11,39 @@ def plot_data_examples():
     """
     conf = get_config()
 
-    loader_train, _, _, _, _ = get_loaders(conf)
-    it_loader_train = iter(loader_train)
-    x, y, _, original = next(it_loader_train)
+    _, valid_loader, *_ = get_loaders(conf)
+    it_loader_val = iter(valid_loader)
+    x, y, mfccs, waveforms = next(it_loader_val)
 
     for i in range(x.shape[2]):
-        data_orig = original[i].squeeze().numpy()
-        data_network = x[:, i, :].squeeze().t().numpy()
-        label = y[:, i, :].squeeze().t().numpy()
+        waveform = waveforms[i].numpy()
+        mfcc = mfccs[:, i, :].squeeze().t().numpy()
+        x_sample = x[:, i, :].squeeze().t().numpy()
+        y_sample = y[:, i, :].squeeze().t().numpy()
 
-        min, max = np.min(data_orig), np.max(data_orig)
+        try:
+            y_sample.shape[1]
+        except IndexError:
+            y_sample = np.expand_dims(y_sample, axis=1)  # if only 1D
 
-        fig, axs = plt.subplots(nrows=3, figsize=(8, 15))
-        axs[0].imshow(data_orig, origin='lower', vmin=min, vmax=max)
-        axs[0].set_title("Original Data")
-        axs[1].imshow(data_network, origin='lower', vmin=min, vmax=max)
-        axs[1].set_title("Input Data")
-        axs[2].imshow(label, origin='lower', vmin=min, vmax=max)
-        axs[2].set_title("Data to predict")
+        min, max = np.min(mfcc), np.max(mfcc)
+
+        fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(15, 10))
+        axs[0, 0].plot(waveform.T)
+        axs[0, 0].set_title("Waveform")
+        axs[0, 1].imshow(mfcc, origin='lower', vmin=min, vmax=max, aspect="auto")
+        axs[0, 1].set_title("MFCC")
+        axs[1, 0].imshow(x_sample, origin='lower', vmin=min, vmax=max, aspect="auto")
+        axs[1, 0].set_title("Input Data x")
+        axs[1, 1].imshow(y_sample, origin='lower', vmin=min, vmax=max, aspect="auto")
+        axs[1, 1].set_title("Label y")
         plt.tight_layout()
         plt.show()
 
-        # training: started with a loss of 3.6e+03
+        # save masked mfcc as png
+        # plt.imshow(x_sample, origin='lower', vmin=min, vmax=max, aspect="auto")
+        # plt.title("Input Data x")
+        # plt.savefig("input_{}f_masked.png".format(conf['n_frames']))
 
 
 if __name__ == '__main__':

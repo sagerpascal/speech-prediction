@@ -24,8 +24,9 @@ def get_model(conf):
                                map_location=torch.device(conf['device']))
 
     else:
-        custom_encoder = VGGExtractor()
-        model = torch.nn.Transformer(d_model=512, custom_encoder=custom_encoder)  # d_model=40 if without encoder
+        # custom_encoder = VGGExtractor().to(conf['device'])
+        # https://pytorch.org/docs/stable/generated/torch.nn.Transformer.html
+        model = torch.nn.Transformer(d_model=40) #, custom_encoder=custom_encoder) TODO: encoder not working!!!
 
         print(model)
         print("Model has {} parameters".format(count_parameters(model)))

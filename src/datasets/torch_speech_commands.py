@@ -36,6 +36,10 @@ class SubsetSC(SPEECHCOMMANDS):
             excludes = set(excludes)
             self._walker = [w for w in self._walker if w not in excludes]
 
+    def __getitem__(self, item):
+        # only for debugging
+        data = super().__getitem__(item)
+        return data
 
 def pad_mfcc(batch):
     batch = [item.squeeze().permute(1, 0) for item in batch]
@@ -50,57 +54,84 @@ def pad_mfcc2(batch):
     return batch
 
 
-def collate_fn():
-    mfcc_transf = torchaudio.transforms.MFCC(sample_rate=16000) #, melkwargs={"hop_length": 512})
+def normalize(tensor):
+    tensor_minusmean = tensor - tensor.mean()
+    return tensor_minusmean / tensor_minusmean.max()
+
+def collate_fn(conf):
+    mfcc_transf = torchaudio.transforms.MFCC(sample_rate=16000)  #, melkwargs={"hop_length": 512})
+    mask_pos = conf['mask_pos']
+    n_frames = conf['n_frames']
 
     def fn(batch):
 
-        tensors, targets, mfccs, waveforms = [], [], [], []
-        n_skipped = 0
+        mfccs, waveforms = [], []
 
         for waveform, _, label, *_ in batch:
+            waveforms += [waveform]
             mfcc = mfcc_transf.forward(waveform)
-            # TODO: normalize!!!!, e.g. https://programmersought.com/article/60547044244/
-            length = mfcc.shape[2]
-            target_l, target_h = int(length / 2) - 15, int(length / 2) + 15
-            tensor = torch.cat((
-                mfcc[:, :, :target_l],
-                torch.zeros((mfcc.shape[0], mfcc.shape[1], target_h - target_l)),
-                mfcc[:, :, target_h:]
-            ), dim=2)
-            target = mfcc[:, :, target_l:target_h]
-            if target.shape[2] != 30:
-                logger.error(
-                    "ERROR in traget size: waveform is to small (mfcc size={}, target size={})".format(mfcc.shape,
-                                                                                                       target.shape))
-                n_skipped += 1
-            else:
-                tensors += [tensor]
-                targets += [target]
-                mfccs += [mfcc]
-                waveforms += [waveform]
+            mfccs += [mfcc]
 
-            # TODO: FIXME some tensors had to be skipped due to their size (Just add a random tensor twice so that the batch size is correct...)
-            for _ in range(n_skipped):
-                idx = random.randint(0, len(tensors) - 1)
-                tensors += [tensors[idx]]
-                targets += [targets[idx]]
-                mfccs += [mfccs[idx]]
-                waveforms += [waveforms[idx]]
+        mfccs = pad_mfcc2(mfccs)
+        mfccs = normalize(mfccs)
 
-            # for self implemented transformer network
-            # tensors, length = pad_mfcc(tensors)
-            # targets = torch.cat(targets) # Sizes of tensors must match except in dimension 0. Got 40 and 3 in dimension 2 (The offending index is 15)
-            # targets = targets.reshape(targets.shape[0], targets.shape[1]*targets.shape[2])
-            # length = torch.LongTensor(length)
+        if mask_pos == 'end':
+            idx = mfccs.shape[0] - n_frames
+            targets = mfccs.detach().clone()[idx:, :, :]
+            tensors = mfccs.detach().clone()
+            tensors[idx:, :, :] = 0.
 
-            # for torch transformer network
-            tensors = pad_mfcc2(tensors)  # source sqeuence length x batch size x feature number = 81x64x40
-            targets = torch.cat(targets).permute(2, 0,
-                                                 1)  # target sequence length x batch size x feature number = 30x64x40
-            length = None
+        elif mask_pos == 'beginning':
+            idx = n_frames
+            targets = mfccs[:idx, :, :]
+            tensors = mfccs.detach().clone()
+            tensors[:idx, :, :] = 0.
 
-            return tensors, targets, length, mfccs, waveform
+        elif mask_pos == 'random':
+            # TODO: implement
+            #mfccs = torchaudio.functional.mask_along_axis_iid(mfccs, mask_param=n_frames, mask_value=0., axis=2)
+            pass
+
+        else:
+            raise AttributeError("Unknown mask_pos in config-file: {}".format(conf['mask_pos']))
+
+        # Mask a part of the center
+        # length = mfcc.shape[2]
+        # target_l, target_h = int(length / 2) - 15, int(length / 2) + 15
+        # tensor = torch.cat((
+        #     mfcc[:, :, :target_l],
+        #     torch.zeros((mfcc.shape[0], mfcc.shape[1], target_h - target_l)),
+        #     mfcc[:, :, target_h:]
+        # ), dim=2)
+        # target = mfcc[:, :, target_l:target_h]
+        # if target.shape[2] != 30:
+        #     logger.error(
+        #         "ERROR in traget size: waveform is to small (mfcc size={}, target size={})".format(mfcc.shape,
+        #                                                                                            target.shape))
+        #     n_skipped += 1
+        # else:
+        #     tensors += [tensor]
+        #     targets += [target]
+        #     mfccs += [mfcc]
+        #     waveforms += [waveform]
+        #
+        # # TODO: FIXME some tensors had to be skipped due to their size (Just add a random tensor twice so that the batch size is correct...)
+        # for _ in range(n_skipped):
+        #     idx = random.randint(0, len(tensors) - 1)
+        #     tensors += [tensors[idx]]
+        #     targets += [targets[idx]]
+        #     mfccs += [mfccs[idx]]
+        #     waveforms += [waveforms[idx]]
+        #
+        #
+        # # for torch transformer network
+        # tensors = pad_mfcc2(tensors)  # source sqeuence length x batch size x feature number = 81x64x40
+        # targets = torch.cat(targets).permute(2, 0, 1)  # target sequence length x batch size x feature number = 30x64x40
+        # # length = None
+        #
+        # return tensors, targets, length, mfccs, waveform
+
+        return tensors, targets, mfccs, waveforms
 
     return fn
 

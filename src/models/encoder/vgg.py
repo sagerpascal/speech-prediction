@@ -124,7 +124,18 @@ class VGGExtractor(CNNExtractor):
         if mask_conv:
             self.conv = MaskConv2d(self.conv)
 
-    def forward(self, inputs: Tensor, input_lengths: Tensor) -> Optional[Any]:
-        if self.mask_conv:
-            return self.conv(inputs, input_lengths)
-        return self.conv(inputs)
+    # TODO: implement masking
+    # def forward(self, inputs: Tensor, input_lengths: Tensor, mask: Tensor, src_key_padding_mask: Tensor) -> Optional[Any]:
+    #     # TODO: implement masking
+    #     if self.mask_conv:
+    #         return self.conv(inputs, input_lengths)
+    #     return self.conv(inputs)
+
+    # TODO: cleanup (this is self implemented according transformer code)
+    def forward(self, inputs: Tensor, *args, **kwargs):
+        x = inputs.permute(1,0,2).unsqueeze(1)
+        x = self.conv(x)
+        conv_feat = x.transpose(1, 2)
+        batch_size, seq_length, num_channels, hidden_dim = conv_feat.size()
+        conv_feat = conv_feat.contiguous().view(batch_size, seq_length, num_channels * hidden_dim)
+        return conv_feat.permute(1, 0, 2)

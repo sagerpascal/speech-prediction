@@ -4,17 +4,16 @@ import shutil
 import sys
 
 import torch
-import torchaudio
 import wandb
 from tqdm.auto import tqdm
-
+import models
 from dataloader import get_loaders
 from loss import get_loss
 from metrics import get_metrics
 from models.model import get_model
 from optimizer import get_optimizer, optimizer_to
-from utils.meter import AverageValueMeter
 from utils.log import format_logs
+from utils.meter import AverageValueMeter
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +42,7 @@ class Epoch:
         for m in self.metrics:
             m.to(device)
 
-
-    def batch_update(self, x, y, input_lengths=None):
+    def batch_update(self, x, y):
         raise NotImplementedError
 
     def on_epoch_start(self):
@@ -53,20 +51,16 @@ class Epoch:
     def run(self, dataloader_):
         self.on_epoch_start()
 
-
         logs = {}
         loss_meter = AverageValueMeter()
         metrics_meters = {metric.__name__: AverageValueMeter() for metric in self.metrics}
 
         with tqdm(dataloader_, desc=self.stage_name, file=sys.stdout, disable=not self.verbose) as iterator:
-            for x, y, length, _, _ in iterator:
+            for x, y, _, _ in iterator:
                 x, y = x.to(self.conf['device']), y.to(self.conf['device'])
 
-                if length is not None:
-                    length = length.to(self.conf['device'])  # TODO: length only with custom transformer
-
                 # train the network with one batch
-                loss, y_pred = self.batch_update(x, y, length)
+                loss, y_pred = self.batch_update(x, y)
 
                 # update logs: loss value
                 loss_value = loss.cpu().detach().numpy()
@@ -85,6 +79,7 @@ class Epoch:
                     s = format_logs(logs)
                     iterator.set_postfix_str(s)
 
+        torch.cuda.empty_cache()
         return logs
 
 
@@ -104,7 +99,7 @@ class TrainEpoch(Epoch):
     def on_epoch_start(self):
         self.model.train()
 
-    def batch_update(self, x, y, input_lengths=None):
+    def batch_update(self, x, y):
         self.optimizer.zero_grad()
         output = self.model.forward(x, y)
         # TODO with custom transformer model: output, encoder_log_probs, input_lengths = self.model.forward(x, input_lengths, y)
@@ -129,7 +124,7 @@ class ValidEpoch(Epoch):
     def on_epoch_start(self):
         self.model.eval()
 
-    def batch_update(self, x, y, input_lengths=None):
+    def batch_update(self, x, y):
         with torch.no_grad():
             # https://datascience.stackexchange.com/questions/81727/what-would-be-the-target-input-for-transformer-decoder-during-test-phase
             # TODO with custom transformer model: output, encoder_log_probs, input_lengths  = self.model.forward(x, input_lengths, y)
@@ -203,6 +198,9 @@ def train(conf):
         conf=conf
     )
 
+    if conf['use_wandb']:
+        wandb_log_settings(conf, loader_train, loader_val)
+
     best_loss = 9999999
     count_not_improved = 0
 
@@ -217,6 +215,7 @@ def train(conf):
             model_name = wandb.run.name if conf['use_wandb'] else 'tsc_acf'
             save_model(model, model_name, save_wandb=conf['use_wandb'])
             logger.info("Model saved (loss={})".format(best_loss))
+            count_not_improved = 1
 
         else:
             count_not_improved += 1
@@ -229,6 +228,8 @@ def train(conf):
         if conf['use_lr_scheduler']:
             lr_scheduler.step(epoch=i)
 
-        if conf['early_stopping'] and count_not_improved >= 5:
+        if train_logs['loss'] < 0.0001 or conf['early_stopping'] and count_not_improved >= 5:
             logger.info("early stopping after {} epochs".format(i))
             break
+
+    return train_logs, valid_logs

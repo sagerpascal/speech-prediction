@@ -24,8 +24,8 @@ class MAE(MeanAbsoluteError):
 
 
 def get_metrics(conf):
-    metrics = [ExplainedVarianceUA(),
-               ExplainedVarianceVW(),
+    metrics = [#ExplainedVarianceUA(),
+               #ExplainedVarianceVW(),
                MSE(),
                MAE(),
                ]

@@ -4,6 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import random
 from tqdm.auto import tqdm
 
 from dataloader import get_loaders
@@ -48,40 +49,34 @@ def calc_metrics(conf, loader_test, model, metrics):
 def plot_one_predicted_batch(conf, loader_test, model):
     it_loader_test = iter(loader_test)
     x, y, _, original, waveform = next(it_loader_test)
-    x, y, _, original, waveform = next(it_loader_test)
-    x, y, _, original, waveform = next(it_loader_test)
-    x, y, _, original, waveform = next(it_loader_test)
-    x, y, _, original, waveform = next(it_loader_test)
-    x, y, _, original, waveform = next(it_loader_test)
-    x, y, _, original, waveform = next(it_loader_test)
 
     x_t, y_t = x.to(conf['device']), y.to(conf['device'])
 
     with torch.no_grad():
         y_pred = model.forward(x_t, y_t)
 
-    i=0 # TODO: replace with for loop
-    waveform = waveform[i]
-    data_orig = original[i].squeeze().numpy()
-    data_network = x[:, i, :].squeeze().t().numpy()
-    label_gt = y[:, i, :].squeeze().t().numpy()
-    label_pr = y_pred[:, i, :].squeeze().t().cpu().numpy()
+    for i in range(random.randint(0, len(waveform))):
+        waveform = waveform[i]
+        data_orig = original[i].squeeze().numpy()
+        data_network = x[:, i, :].squeeze().t().numpy()
+        label_gt = y[:, i, :].squeeze().t().numpy()
+        label_pr = y_pred[:, i, :].squeeze().t().cpu().numpy()
 
-    vmin, vmax = np.min(data_orig), np.max(data_orig)
+        vmin, vmax = np.min(data_orig), np.max(data_orig)
 
-    fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(15, 15))
-    axs[0, 0].plot(waveform)
-    axs[0, 0].set_title("Waveform")
-    axs[1, 0].imshow(data_orig, origin='lower', vmin=vmin, vmax=vmax)
-    axs[1, 0].set_title("Original MFCC")
-    axs[1, 1].imshow(data_network, origin='lower', vmin=vmin, vmax=vmax)
-    axs[1, 1].set_title("Input Data")
-    axs[2, 0].imshow(label_gt, origin='lower', vmin=vmin, vmax=vmax)
-    axs[2, 0].set_title("Groud Truth")
-    axs[2, 1].imshow(label_pr, origin='lower', vmin=vmin, vmax=vmax)
-    axs[2, 1].set_title("Prediction")
-    plt.tight_layout()
-    plt.show()
+        fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(15, 15))
+        axs[0, 0].plot(waveform)
+        axs[0, 0].set_title("Waveform")
+        axs[1, 0].imshow(data_orig, origin='lower', vmin=vmin, vmax=vmax)
+        axs[1, 0].set_title("Original MFCC")
+        axs[1, 1].imshow(data_network, origin='lower', vmin=vmin, vmax=vmax)
+        axs[1, 1].set_title("Input Data")
+        axs[2, 0].imshow(label_gt, origin='lower', vmin=vmin, vmax=vmax)
+        axs[2, 0].set_title("Groud Truth")
+        axs[2, 1].imshow(label_pr, origin='lower', vmin=vmin, vmax=vmax)
+        axs[2, 1].set_title("Prediction")
+        plt.tight_layout()
+        plt.show()
 
 
 def play_audio_files(conf, loader_test, model):
@@ -89,32 +84,23 @@ def play_audio_files(conf, loader_test, model):
         import sounddevice as sd
         from librosa.feature.inverse import mfcc_to_audio
         import time
-        import random
         import scipy.io.wavfile
 
         it_loader_test = iter(loader_test)
 
         # select a random batch between 1 and 10
-        # for _ in range(random.randint(1, 10)):
-        #     x, y, _, original, waveform = next(it_loader_test)
-
-        x, y, _, original, waveform = next(it_loader_test)
-        x, y, _, original, waveform = next(it_loader_test)
-        x, y, _, original, waveform = next(it_loader_test)
-        x, y, _, original, waveform = next(it_loader_test)
-        x, y, _, original, waveform = next(it_loader_test)
-        x, y, _, original, waveform = next(it_loader_test)
-        x, y, _, original, waveform = next(it_loader_test)
+        for _ in range(random.randint(1, 10)):
+            x, y, _, original, waveform = next(it_loader_test)
 
         with torch.no_grad():
             x_t, y_t = x.to(conf['device']), y.to(conf['device'])
             y_pred = model.forward(x_t, y_t)
 
         # only use one example from batch -> select a random batch
-        random_idx = 0  # random.randint(0, len(waveform)-1)
-        # while not np.all(x[:, random_idx, :].cpu().numpy()[25:54, :] == 0):
-        #     # it works only for a fixed shape so far...
-        #     random_idx = random.randint(0, len(waveform)-1)
+        random_idx = random.randint(0, len(waveform)-1)
+        while not np.all(x[:, random_idx, :].cpu().numpy()[25:54, :] == 0):
+            # it works only for a fixed shape so far...
+            random_idx = random.randint(0, len(waveform)-1)
 
         waveform = waveform[random_idx]
         original = original[random_idx].squeeze().cpu().numpy()

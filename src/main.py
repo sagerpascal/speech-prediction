@@ -1,7 +1,7 @@
 import platform
 
 import torchaudio
-
+import logging
 from train import train
 from evaluate import evaluate
 from utils.conf_reader import get_config
@@ -17,15 +17,28 @@ def init():
         torchaudio.set_audio_backend("sox_io")
 
 
-def main():
+def main(n_frames=None):
+    logger = logging.getLogger(__name__)
+
     conf = get_config()
+
+    if n_frames is not None:
+        conf['n_frames'] = n_frames
+
+    wandb_run = None
     if conf['use_wandb']:
-        setup_wandb()
+        wandb_run = setup_wandb()
 
     if conf['mode'] == "train":
-        train(conf)
+        train_logs, valid_logs = train(conf)
+        logger.info('Training logs: {}\n Validation logs: {}'.format(str(train_logs), str(valid_logs)))
+
     elif conf['mode'] == "eval":
         evaluate(conf)
+
+    if wandb_run is not None:
+        wandb_run.finish()
+
     else:
         raise AttributeError("Unknown mode in config file: {}".format(conf.get('mode')))
 

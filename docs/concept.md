@@ -68,7 +68,7 @@ Different Input-Data:
 
 | $$k=1$$ | $$k=5$$ | $$k=10$$ |
 |---------|---------|----------|
-| <img src="assets/concept/input_1f_masked.png" width="30%" /> | <img src="assets/concept/input_5f_masked.png" width="30%" /> | <img src="assets/concept/input_10f_masked.png" width="30%" /> |
+| <img src="assets/concept/input_1f_masked.png"/> | <img src="assets/concept/input_5f_masked.png" /> | <img src="assets/concept/input_10f_masked.png" /> |
 
 <p align="center">
  ...
@@ -76,18 +76,20 @@ Different Input-Data:
 
 | $$k=50$$ | $$k=60$$ | $$k=70$$ |
 |----------|----------|----------|
-| <img src="assets/concept/input_50f_masked.png" width="30%" /> | <img src="assets/concept/input_60f_masked.png" width="30%" /> | <img src="assets/concept/input_70f_masked.png" width="30%" /> |
+| <img src="assets/concept/input_50f_masked.png" /> | <img src="assets/concept/input_60f_masked.png" /> | <img src="assets/concept/input_70f_masked.png"/> |
 
 
 The error tends to be slightly larger when more frames are masked (larger $$k$$). However, this is not true in all cases and the difference is relatively small.
 
 ###### Error per Epoch for Runs with different k
+
 | MAE | MSE |
 |-----|-----|
 | <img src="assets/concept/mae_ex2.png" width="50%" /> | <img src="assets/concept/mse_ex2.png" width="50%" /> | 
 
 
 ###### Standard Deviation per Epoch for Runs with different k
+
 | MAE | MSE |
 |-----|-----|
 | <img src="assets/concept/mae_std_ex2.png" width="50%" /> | <img src="assets/concept/mse_std_ex2.png" width="50%" /> | 

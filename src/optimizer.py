@@ -1,5 +1,5 @@
-from torch import optim
 import torch
+from torch import optim
 
 
 def optimizer_to(optim, device):
@@ -16,9 +16,11 @@ def optimizer_to(optim, device):
                     if subparam._grad is not None:
                         subparam._grad.data = subparam._grad.data.to(device)
 
-def get_optimizer(conf, model):
-    if conf['optimizer'] == 'adam':
-        return optim.Adam(model.parameters(), lr=conf['lr'], weight_decay=conf['weight_decay'])
-    else:
-        raise AttributeError("Unsupported optimizer in config file: {}".format(conf['optimizer']))
 
+def get_optimizer(conf, model):
+    if conf['optimizer']['type'] == 'adam':
+        return optim.Adam(model.parameters(),
+                          lr=conf['optimizer']['lr'],
+                          weight_decay=conf['optimizer']['weight_decay'])
+    else:
+        raise AttributeError("Unsupported optimizer in config file: {}".format(conf['optimizer']['type']))

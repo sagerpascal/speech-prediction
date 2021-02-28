@@ -7,6 +7,7 @@ import torch
 import wandb
 from tqdm.auto import tqdm
 import models
+import numpy as np
 from dataloader import get_loaders
 from loss import get_loss
 from metrics import get_metrics
@@ -180,8 +181,8 @@ def train(conf):
     optimizer_to(optimizer, conf['device'])
     metrics = get_metrics(conf)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
-                                                   step_size=conf['scheduler_step_size'],
-                                                   gamma=conf['scheduler_gamma'])
+                                                   step_size=conf['lr_scheduler']['step_size'],
+                                                   gamma=conf['lr_scheduler']['gamma'])
 
     train_epoch = TrainEpoch(
         model=model,
@@ -204,7 +205,7 @@ def train(conf):
     best_loss = 9999999
     count_not_improved = 0
 
-    for i in range(conf['max_number_of_epochs']):
+    for i in range(conf['train']['max_number_of_epochs']):
         train_logs = train_epoch.run(loader_train)
         valid_logs = valid_epoch.run(loader_val)
         if conf['use_wandb']:
@@ -225,10 +226,10 @@ def train(conf):
             save_model(model, model_name, save_wandb=False)
             logger.info("Model saved as backup after {} epochs".format(i))
 
-        if conf['use_lr_scheduler']:
+        if conf['lr_scheduler']['activate']:
             lr_scheduler.step(epoch=i)
 
-        if train_logs['loss'] < 0.0001 or conf['early_stopping'] and count_not_improved >= 5:
+        if train_logs['loss'] < 0.0001 or conf['train']['early_stopping'] and count_not_improved >= 5:
             logger.info("early stopping after {} epochs".format(i))
             break
 

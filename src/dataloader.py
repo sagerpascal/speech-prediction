@@ -21,7 +21,7 @@ def _get_torch_speech_commands(conf):
 
     train_loader = DataLoader(
         train_set,
-        batch_size=conf['batch_size'],
+        batch_size=conf['train']['batch_size'],
         shuffle=True,
         collate_fn=collate_fn(conf),
         num_workers=num_workers,
@@ -29,7 +29,7 @@ def _get_torch_speech_commands(conf):
     )
     val_loader = DataLoader(
         val_set,
-        batch_size=conf['batch_size'],
+        batch_size=conf['train']['batch_size'],
         shuffle=False,
         drop_last=False,
         collate_fn=collate_fn(conf),
@@ -38,7 +38,7 @@ def _get_torch_speech_commands(conf):
     )
     test_loader = DataLoader(
         test_set,
-        batch_size=conf['batch_size'],
+        batch_size=conf['train']['batch_size'],
         shuffle=False,
         drop_last=False,
         collate_fn=collate_fn(conf),

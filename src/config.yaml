@@ -2,9 +2,9 @@ mode: train # either train or eval
 use_wandb: False
 
 # Mask MFCC
-mask_pos: end # end, beginning or random
-n_frames: 81
-
+masking:
+  position: end # end, beginning or random
+  n_frames: 81
 
 data:
   dataset: torch-speech-commands # torch-speech-commands, TIMIT, VOX2
@@ -14,15 +14,18 @@ data:
   dataset_path: /scratch/xnur/DATASETS
 
 # Training settings
-batch_size: 64
-max_number_of_epochs: 40
-early_stopping: False
+train:
+  batch_size: 64
+  max_number_of_epochs: 40
+  early_stopping: False
 
 # LR Scheduler
-use_lr_scheduler: False
-scheduler_step_size: 10
-scheduler_gamma: 0.3
+lr_scheduler:
+  activate: False
+  step_size: 10
+  gamma: 0.3
 
 # Optimizer
-optimizer: adam
-weight_decay: 0.0001
+optimizer:
+  type: adam
+  weight_decay: 0.0001

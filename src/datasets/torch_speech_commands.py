@@ -60,8 +60,8 @@ def normalize(tensor):
 
 def collate_fn(conf):
     mfcc_transf = torchaudio.transforms.MFCC(sample_rate=16000)  #, melkwargs={"hop_length": 512})
-    mask_pos = conf['mask_pos']
-    n_frames = conf['n_frames']
+    mask_pos = conf['masking']['position']
+    n_frames = conf['masking']['n_frames']
 
     def fn(batch):
 
@@ -93,7 +93,7 @@ def collate_fn(conf):
             pass
 
         else:
-            raise AttributeError("Unknown mask_pos in config-file: {}".format(conf['mask_pos']))
+            raise AttributeError("Unknown mask_pos in config-file: {}".format(mask_pos))
 
         # Mask a part of the center
         # length = mfcc.shape[2]

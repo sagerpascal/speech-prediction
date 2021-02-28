@@ -20,7 +20,7 @@ def get_config():
 
     args_dict = {
         'load_model': str(args.load_model),
-        'lr': float(args.learning_rate),
+        'optimizer': {'lr': float(args.learning_rate)},
         'device': device,
     }
 

@@ -21,9 +21,7 @@ def get_config():
     conf_file_ds = _read_conf_file(conf_file['data']['config_file'])
 
     conf_file['data'] = {**conf_file['data'], **conf_file_ds}
-
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    ddp = 'cuda' in device and conf_file['world_size'] > 1
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--learning_rate", default=0.005, help="The learning rate")
@@ -33,10 +31,10 @@ def get_config():
     args_dict = {
         'load_model': str(args.load_model),
         'device': device,
-        'use_data_parallel': ddp,
     }
 
     conf = {**conf_file, **args_dict}
     conf['optimizer']['lr'] = float(args.learning_rate)
+    conf['env']['use_data_parallel'] = 'cuda' in device and conf_file['env']['world_size'] > 1
 
     return conf

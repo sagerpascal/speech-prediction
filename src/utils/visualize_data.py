@@ -12,8 +12,10 @@ def plot_data_examples():
     Just plot a few samples from the dataset...
     """
     conf = get_config()
+    conf['env']['world_size'] = 1
+    conf['env']['use_data_parallel'] = False
 
-    _, valid_loader, *_ = get_loaders(conf)
+    _, valid_loader, *_ = get_loaders(conf, device=conf['device'])
     valid_loader.collate_fn = collate_fn(conf, debug=True)
 
     it_loader_val = iter(valid_loader)

@@ -1,5 +1,5 @@
-mode: train # either train or eval
-use_wandb: True
+mode: eval # either train or eval
+use_wandb: False
 
 # Environment
 env:

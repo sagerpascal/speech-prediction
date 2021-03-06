@@ -176,11 +176,11 @@ def save_model(model, model_path, model_name, save_wandb=False):
 
 
 def train(rank=None, world_size=None, conf=None):
-    is_main_process = not conf['use_data_parallel'] or conf['use_data_parallel'] and rank == 0
+    is_main_process = not conf['env']['use_data_parallel'] or conf['env']['use_data_parallel'] and rank == 0
 
     model = get_model(conf)
 
-    if conf['use_data_parallel']:
+    if conf['env']['use_data_parallel']:
         torch.cuda.manual_seed_all(42)
         setup(rank, world_size)
         logger.info("Running DDP on rank {}".format(rank))
@@ -224,7 +224,7 @@ def train(rank=None, world_size=None, conf=None):
 
     for i in range(conf['train']['max_number_of_epochs']):
 
-        if conf['use_data_parallel']:
+        if conf['env']['use_data_parallel']:
             loader_train.sampler.set_epoch(i)
             loader_val.sampler.set_epoch(i)
             dist.barrier()
@@ -238,7 +238,7 @@ def train(rank=None, world_size=None, conf=None):
 
         if valid_logs['loss'] < best_loss:
             model_name = wandb.run.name if conf['use_wandb'] else 'tsc_acf'
-            model_path = 'trained_models'
+            model_path = '/workspace/data_pa/trained_models'
             if is_main_process:
                 # for parallel models: only save file once!
                 best_loss = valid_logs['loss']
@@ -247,7 +247,7 @@ def train(rank=None, world_size=None, conf=None):
                 logger.info("Model saved (loss={})".format(best_loss))
                 count_not_improved = 1
 
-            if conf['use_data_parallel']:
+            if conf['env']['use_data_parallel']:
                 dist.barrier()  # Other processes have to load model saved by process 0
                 map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
                 model.load_state_dict(torch.load(Path(model_path) / model_name, map_location=map_location))
@@ -257,7 +257,7 @@ def train(rank=None, world_size=None, conf=None):
 
         if i % 50 == 0 and is_main_process:
             model_name = "{}_backup".format(wandb.run.name) if conf['use_wandb'] else 'model_backup'
-            save_model(model, 'trained_models', model_name, save_wandb=False)
+            save_model(model, '/workspace/data_pa/trained_models', model_name, save_wandb=False)
             logger.info("Model saved as backup after {} epochs".format(i))
 
         if conf['lr_scheduler']['activate']:

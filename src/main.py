@@ -30,11 +30,11 @@ def main(n_frames=None):
 
     wandb_run = None
     if conf['use_wandb']:
-        wandb_run = setup_wandb()
+        wandb_run = setup_wandb(conf)
 
     if conf['mode'] == "train":
 
-        if conf['use_data_parallel']:
+        if conf['env']['use_data_parallel']:
             world_size = conf['world_size']
             mp.spawn(train,
                      args=(world_size,conf),

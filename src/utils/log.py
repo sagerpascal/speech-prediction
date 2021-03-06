@@ -14,8 +14,8 @@ def setup_logging():
     logger.addHandler(stream_handler)
 
 
-def setup_wandb():
-    return wandb.init(project="ASR temporal context", job_type='train')
+def setup_wandb(conf):
+    return wandb.init(project="ASR {}".format(conf['data']['dataset']), job_type='train')
 
 def format_logs( logs):
     """ format logs in tqdm """

@@ -10,23 +10,23 @@ from datasets.collate import collate_fn
 def _get_loader(conf, train_set, val_set, test_set, rank=None):
     if "cuda" in conf['device']:
         num_workers = 0 if platform.system() == "Windows" else 1
-        num_workers = num_workers * torch.cuda.device_count() if conf['use_data_parallel'] else num_workers
+        num_workers = num_workers * torch.cuda.device_count() if conf['env']['use_data_parallel'] else num_workers
         pin_memory = True
     else:
         num_workers = 0
         pin_memory = False
 
-    if conf['use_data_parallel']:
+    if conf['env']['use_data_parallel']:
         train_sampler = DistributedSampler(train_set,
-                                           num_replicas=conf['world_size'],
+                                           num_replicas=conf['env']['world_size'],
                                            rank=rank,
                                            shuffle=True)
         valid_sampler = DistributedSampler(val_set,
-                                           num_replicas=conf['world_size'],
+                                           num_replicas=conf['env']['world_size'],
                                            rank=rank,
                                            shuffle=False)
         test_sampler = DistributedSampler(test_set,
-                                          num_replicas=conf['world_size'],
+                                          num_replicas=conf['env']['world_size'],
                                           rank=rank,
                                           shuffle=False)
 

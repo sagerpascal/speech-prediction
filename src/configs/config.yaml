@@ -1,29 +1,26 @@
 mode: train # either train or eval
-use_wandb: False
+use_wandb: True
 
 # Mask MFCC
 masking:
   position: end # end, beginning or random
-  n_frames: 81
+  n_frames: 60 # max. number of input frames TODO: correct me, is currently number to predict
+  k_frames: 60 # number of frames to predict
 
 data:
-  dataset: torch-speech-commands # torch-speech-commands, TIMIT, VOX2
-  subset: 00_ORIGINAL
-  audio_list_train: 02_train
-  audio_list_val: 03_val
-  dataset_path: /scratch/xnur/DATASETS
+  config_file: datasets/timit-original.yaml
 
 # Training settings
 train:
   batch_size: 64
-  max_number_of_epochs: 40
+  max_number_of_epochs: 1000
   early_stopping: False
 
 # LR Scheduler
 lr_scheduler:
   activate: False
-  step_size: 10
-  gamma: 0.3
+  step_size: 30
+  gamma: 0.5
 
 # Optimizer
 optimizer:

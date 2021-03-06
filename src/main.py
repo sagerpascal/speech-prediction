@@ -38,11 +38,11 @@ def main(n_frames=None):
     elif conf['mode'] == "eval":
         evaluate(conf)
 
-    if wandb_run is not None:
-        wandb_run.finish()
-
     else:
         raise AttributeError("Unknown mode in config file: {}".format(conf.get('mode')))
+
+    if wandb_run is not None:
+        wandb_run.finish()
 
 
 if __name__ == '__main__':

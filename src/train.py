@@ -57,7 +57,7 @@ class Epoch:
         metrics_meters = {metric.__name__: AverageValueMeter() for metric in self.metrics}
 
         with tqdm(dataloader_, desc=self.stage_name, file=sys.stdout, disable=not self.verbose) as iterator:
-            for x, y, _, _ in iterator:
+            for x, y in iterator:
                 x, y = x.to(self.conf['device']), y.to(self.conf['device'])
 
                 # train the network with one batch
@@ -155,7 +155,8 @@ def wandb_log_epoch(n_epoch, train_logs, valid_logs):
 
 
 def save_model(model, model_name, save_wandb=False):
-    model_path = '../data/trained_models' if os.path.exists('../data') else 'data/trained_models'
+    #model_path = '../../audio_data/trained_models' if os.path.exists('../../audio_data') else 'data/trained_models'
+    model_path = 'trained_models'
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
@@ -175,6 +176,7 @@ def save_model(model, model_name, save_wandb=False):
 
 def train(conf):
     loader_train, loader_val, _ = get_loaders(conf)
+
     model = get_model(conf)
     loss = get_loss(conf)
     optimizer = get_optimizer(conf, model)

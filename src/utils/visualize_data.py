@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
+import os
 from dataloader import get_loaders
 from utils.conf_reader import get_config
+from datasets.collate import collate_fn
 
+os.chdir('../')
 
 def plot_data_examples():
     """
@@ -12,14 +14,16 @@ def plot_data_examples():
     conf = get_config()
 
     _, valid_loader, *_ = get_loaders(conf)
-    it_loader_val = iter(valid_loader)
-    x, y, mfccs, waveforms = next(it_loader_val)
+    valid_loader.collate_fn = collate_fn(conf, debug=True)
 
-    for i in range(x.shape[2]):
+    it_loader_val = iter(valid_loader)
+    data, target, mfccs, waveforms = next(it_loader_val)
+
+    for i in range(data.shape[2]):
         waveform = waveforms[i].numpy()
         mfcc = mfccs[:, i, :].squeeze().t().numpy()
-        x_sample = x[:, i, :].squeeze().t().numpy()
-        y_sample = y[:, i, :].squeeze().t().numpy()
+        x_sample = data[:, i, :].squeeze().t().numpy()
+        y_sample = target[:, i, :].squeeze().t().numpy()
 
         try:
             y_sample.shape[1]

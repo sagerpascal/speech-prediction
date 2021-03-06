@@ -20,8 +20,12 @@ def get_model(conf):
             model = torch.load("data/trained_models/{}.pth".format(conf['load_model']),
                                map_location=torch.device(conf['device']))
         except FileNotFoundError:
-            model = torch.load("../data/trained_models/{}.pth".format(conf['load_model']),
+            try:
+                model = torch.load("../data/trained_models/{}.pth".format(conf['load_model']),
                                map_location=torch.device(conf['device']))
+            except FileNotFoundError:
+                model = torch.load("trained_models/{}.pth".format(conf['load_model']),
+                                   map_location=torch.device(conf['device']))
 
     else:
         # custom_encoder = VGGExtractor().to(conf['device'])
@@ -31,18 +35,11 @@ def get_model(conf):
         print(model)
         print("Model has {} parameters".format(count_parameters(model)))
 
-    if 'cpu' in conf['device'] and isinstance(model, torch.nn.DataParallel):
+    #  just for "old" models using DataParallel (now using DistributedDataParallel)
+    if isinstance(model, torch.nn.DataParallel):
         model = model.module
 
-    elif 'cuda' in conf['device'] and torch.cuda.device_count() > 1 and not isinstance(model, nn.DataParallel):
-        model = torch.nn.DataParallel(model)
-
-    elif 'cuda' in conf['device'] and isinstance(model, torch.nn.DataParallel) and len(
-            model.device_ids) != torch.cuda.device_count():
-        model.device_ids = range(torch.cuda.device_count())
-
-    return model.to(conf['device'])
-
+    return model
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)

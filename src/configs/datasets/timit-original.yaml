@@ -1,0 +1,12 @@
+dataset: timit
+
+paths:
+  base: /workspace/audio_data/TIMIT/AUDIO_FILES/ORIGINAL
+  train: train
+  val: train
+  test: test
+
+  df:
+    train: timit-orig-train.csv
+    val: timit-orig-val.csv
+    test: timit-orig-test.csv

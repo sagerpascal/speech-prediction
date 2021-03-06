@@ -1,15 +1,26 @@
 import yaml
 import argparse
 import torch
+from pathlib import Path
+
+def _read_conf_file(name):
+    base_paths = [Path('configs'), Path('../configs'),  Path('src') / 'configs']
+
+    for p in base_paths:
+        try:
+            file = yaml.load(open(p / name), Loader=yaml.FullLoader)
+            return file
+        except FileNotFoundError:
+            pass
+
+    raise FileNotFoundError("Config file not found")
+
 
 def get_config():
-    try:
-        conf_file = yaml.load(open('config.yaml'), Loader=yaml.FullLoader)
-    except FileNotFoundError:
-        try:
-            conf_file = yaml.load(open('../config.yaml'), Loader=yaml.FullLoader)
-        except FileNotFoundError:
-            conf_file = yaml.load(open('src/config.yaml'), Loader=yaml.FullLoader)
+    conf_file = _read_conf_file('config.yaml')
+    conf_file_ds = _read_conf_file(conf_file['data']['config_file'])
+
+    conf_file['data'] = {**conf_file['data'], **conf_file_ds}
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -20,8 +31,10 @@ def get_config():
 
     args_dict = {
         'load_model': str(args.load_model),
-        'optimizer': {'lr': float(args.learning_rate)},
         'device': device,
     }
 
-    return {**conf_file, **args_dict}
+    conf = {**conf_file, **args_dict}
+    conf['optimizer']['lr'] = float(args.learning_rate)
+
+    return conf

@@ -7,6 +7,8 @@ from evaluate import evaluate
 from utils.conf_reader import get_config
 from utils.log import setup_logging, setup_wandb
 
+# TODO: Read https://github.com/stdm/stdm.github.io/blob/master/downloads/papers/CISP_2009.pdf
+# https://github.com/stdm/stdm.github.io/blob/master/downloads/papers/PhdThesis_2010.pdf
 
 def init():
     setup_logging()

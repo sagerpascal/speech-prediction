@@ -6,6 +6,7 @@ from train import train
 from evaluate import evaluate
 from utils.conf_reader import get_config
 from utils.log import setup_logging, setup_wandb
+import torch.multiprocessing as mp
 
 # TODO: Read https://github.com/stdm/stdm.github.io/blob/master/downloads/papers/CISP_2009.pdf
 # https://github.com/stdm/stdm.github.io/blob/master/downloads/papers/PhdThesis_2010.pdf
@@ -32,8 +33,15 @@ def main(n_frames=None):
         wandb_run = setup_wandb()
 
     if conf['mode'] == "train":
-        train_logs, valid_logs = train(conf)
-        logger.info('Training logs: {}\n Validation logs: {}'.format(str(train_logs), str(valid_logs)))
+
+        if conf['use_data_parallel']:
+            world_size = conf['world_size']
+            mp.spawn(train,
+                     args=(world_size,conf),
+                     nprocs=world_size,
+                     join=True)
+        else:
+            train(None, None, conf)
 
     elif conf['mode'] == "eval":
         evaluate(conf)

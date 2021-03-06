@@ -1,12 +1,17 @@
 mode: train # either train or eval
 use_wandb: True
 
+# Environment
+env:
+  world_size: 4 # number of GPUs to run a batch in parallel
+
 # Mask MFCC
 masking:
   position: end # end, beginning or random
   n_frames: 60 # max. number of input frames TODO: correct me, is currently number to predict
   k_frames: 60 # number of frames to predict
 
+# Dataset
 data:
   config_file: datasets/timit-original.yaml
 

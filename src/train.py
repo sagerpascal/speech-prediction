@@ -2,7 +2,7 @@ import logging
 import os
 import shutil
 import sys
-
+from pathlib import Path
 import torch
 import wandb
 from tqdm.auto import tqdm
@@ -15,6 +15,9 @@ from models.model import get_model
 from optimizer import get_optimizer, optimizer_to
 from utils.log import format_logs
 from utils.meter import AverageValueMeter
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.distributed as dist
+from utils.ddp import setup, cleanup
 
 logger = logging.getLogger(__name__)
 
@@ -154,9 +157,7 @@ def wandb_log_epoch(n_epoch, train_logs, valid_logs):
     wandb.log(logs)
 
 
-def save_model(model, model_name, save_wandb=False):
-    #model_path = '../../audio_data/trained_models' if os.path.exists('../../audio_data') else 'data/trained_models'
-    model_path = 'trained_models'
+def save_model(model, model_path, model_name, save_wandb=False):
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
@@ -166,21 +167,33 @@ def save_model(model, model_name, save_wandb=False):
             os.remove(filename)
         torch.save(model, filename)
         wandb.save(filename)
-        shutil.copy(filename, os.path.join(model_path, '{}.pth'.format(model_name)))
+        shutil.copy(filename, Path(model_path) / model_name)
     else:
-        filename = os.path.join(model_path, '{}.pth'.format(model_name))
-        if os.path.exists(filename):
-            os.remove(filename)
-        torch.save(model, filename)
+        if os.path.exists(model_name):
+            os.remove(model_name)
+        torch.save(model, Path(model_path) / model_name)
 
 
-def train(conf):
-    loader_train, loader_val, _ = get_loaders(conf)
+
+def train(rank=None, world_size=None, conf=None):
+    is_main_process = not conf['use_data_parallel'] or conf['use_data_parallel'] and rank == 0
 
     model = get_model(conf)
+
+    if conf['use_data_parallel']:
+        torch.cuda.manual_seed_all(42)
+        setup(rank, world_size)
+        logger.info("Running DDP on rank {}".format(rank))
+        model.to(rank)
+        model = DDP(model, device_ids=[rank])
+        device = rank
+    else:
+        device = conf['device']
+        model.to(device)
+
+    loader_train, loader_val, _ = get_loaders(conf, device)
     loss = get_loss(conf)
     optimizer = get_optimizer(conf, model)
-    optimizer_to(optimizer, conf['device'])
     metrics = get_metrics(conf)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                    step_size=conf['lr_scheduler']['step_size'],
@@ -191,6 +204,7 @@ def train(conf):
         loss=loss,
         metrics=metrics,
         optimizer=optimizer,
+        verbose=is_main_process,
         conf=conf
     )
 
@@ -198,34 +212,52 @@ def train(conf):
         model=model,
         loss=loss,
         metrics=metrics,
+        verbose=is_main_process,
         conf=conf
     )
 
-    if conf['use_wandb']:
+    if conf['use_wandb'] and is_main_process:
         wandb_log_settings(conf, loader_train, loader_val)
 
     best_loss = 9999999
     count_not_improved = 0
 
     for i in range(conf['train']['max_number_of_epochs']):
+
+        if conf['use_data_parallel']:
+            loader_train.sampler.set_epoch(i)
+            loader_val.sampler.set_epoch(i)
+            dist.barrier()
+
         train_logs = train_epoch.run(loader_train)
         valid_logs = valid_epoch.run(loader_val)
-        if conf['use_wandb']:
+        if conf['use_wandb'] and is_main_process:
             wandb_log_epoch(i, train_logs, valid_logs)
 
-        if valid_logs['loss'] < best_loss:
-            best_loss = valid_logs['loss']
-            model_name = wandb.run.name if conf['use_wandb'] else 'tsc_acf'
-            save_model(model, model_name, save_wandb=conf['use_wandb'])
-            logger.info("Model saved (loss={})".format(best_loss))
-            count_not_improved = 1
+        dist.barrier()
 
-        else:
+        if valid_logs['loss'] < best_loss:
+            model_name = wandb.run.name if conf['use_wandb'] else 'tsc_acf'
+            model_path = 'trained_models'
+            if is_main_process:
+                # for parallel models: only save file once!
+                best_loss = valid_logs['loss']
+
+                save_model(model, model_path, model_name, save_wandb=conf['use_wandb'])
+                logger.info("Model saved (loss={})".format(best_loss))
+                count_not_improved = 1
+
+            if conf['use_data_parallel']:
+                dist.barrier()  # Other processes have to load model saved by process 0
+                map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
+                model.load_state_dict(torch.load(Path(model_path) / model_name, map_location=map_location))
+
+        elif is_main_process:
             count_not_improved += 1
 
-        if i % 10 == 0:
+        if i % 50 == 0 and is_main_process:
             model_name = "{}_backup".format(wandb.run.name) if conf['use_wandb'] else 'model_backup'
-            save_model(model, model_name, save_wandb=False)
+            save_model(model, 'trained_models', model_name, save_wandb=False)
             logger.info("Model saved as backup after {} epochs".format(i))
 
         if conf['lr_scheduler']['activate']:

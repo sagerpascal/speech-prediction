@@ -1,2 +1,10 @@
 dataset: torch-speech-commands
 
+transform:
+  sample_rate: 16000
+  n_mfcc: 40
+  win_length: 400
+  hop_length: 200
+  n_fft: 512
+  f_min: 0
+  f_max: 8000

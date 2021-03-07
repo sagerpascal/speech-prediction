@@ -121,39 +121,46 @@ def play_audio_files(conf, loader_test, model):
     # Just for comparison...
     reconstructed_orig = x.copy()
     start_idx = np.min(np.argwhere(np.all(x == 0, axis=1)))
-    reconstructed_orig[start_idx:start_idx+y.shape[0], :] = y
+    reconstructed_orig[start_idx:start_idx + y.shape[0], :] = y
     reconstructed_orig = reconstructed_orig.T
 
     # reconstruct signal from input and prediction
     reconstructed = x.copy()
-    reconstructed[start_idx:start_idx+y.shape[0], :] = y_pred
+    reconstructed[start_idx:start_idx + y.shape[0], :] = y_pred
     reconstructed = reconstructed.T
 
     if platform.system() == "Windows":
         print("Playing original sound...")
         time.sleep(0.5)
-        sd.play(waveform.T, 16000, blocking=True)
+        sd.play(waveform.T, conf['data']['transform']['sample_rate'], blocking=True)
 
         print("Playing MFCC of original sound...")
         time.sleep(0.5)
-        sd.play(mfcc_to_audio(original.T, hop_length=256), 16000, blocking=True)
+        sd.play(mfcc_to_audio(original.T, hop_length=conf['data']['transform']['hop_length']),
+                conf['data']['transform']['sample_rate'], blocking=True)
 
         print("Input (masked) signal...")
         time.sleep(0.5)
-        sd.play(mfcc_to_audio(x.T, hop_length=256), 16000, blocking=True)
+        sd.play(mfcc_to_audio(x.T, hop_length=conf['data']['transform']['hop_length']),
+                conf['data']['transform']['sample_rate'], blocking=True)
 
         print("Playing reconstructed signal...")
         time.sleep(0.5)
-        sd.play(mfcc_to_audio(reconstructed, hop_length=256), 16000, blocking=True)
+        sd.play(mfcc_to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length']),
+                conf['data']['transform']['sample_rate'], blocking=True)
 
         print("Playing MFCC of original sound...")
         time.sleep(0.5)
-        sd.play(mfcc_to_audio(reconstructed_orig, hop_length=256), 16000, blocking=True)
+        sd.play(mfcc_to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length']),
+                conf['data']['transform']['sample_rate'], blocking=True)
 
-    scipy.io.wavfile.write('waveform.wav', 16000, waveform.T)
-    scipy.io.wavfile.write('MFCC.wav', 16000, mfcc_to_audio(original.T, hop_length=256))
-    scipy.io.wavfile.write('MFCC_masked.wav', 16000, mfcc_to_audio(x.T, hop_length=256))
-    scipy.io.wavfile.write('MFCC_reconstructed.wav', 16000, mfcc_to_audio(reconstructed, hop_length=256))
+    scipy.io.wavfile.write('waveform.wav', conf['data']['transform']['sample_rate'], waveform.T)
+    scipy.io.wavfile.write('MFCC.wav', conf['data']['transform']['sample_rate'],
+                           mfcc_to_audio(original.T, hop_length=conf['data']['transform']['hop_length']))
+    scipy.io.wavfile.write('MFCC_masked.wav', conf['data']['transform']['sample_rate'],
+                           mfcc_to_audio(x.T, hop_length=conf['data']['transform']['hop_length']))
+    scipy.io.wavfile.write('MFCC_reconstructed.wav', conf['data']['transform']['sample_rate'],
+                           mfcc_to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length']))
 
 
 def evaluate(conf):

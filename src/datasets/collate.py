@@ -14,8 +14,19 @@ def normalize(tensor):
 
 
 def collate_fn(conf, debug=False):
-    # TODO: read sample rate etc. from config file
-    mfcc_transform = torchaudio.transforms.MFCC(sample_rate=16000)  # , melkwargs={"hop_length": 512})
+    mel_spectro_args = {
+        'sample_rate': conf['data']['transform']['sample_rate'],
+        'win_length': conf['data']['transform']['win_length'],
+        'hop_length': conf['data']['transform']['hop_length'],
+        'n_fft': conf['data']['transform']['n_fft'],
+        'f_min': conf['data']['transform']['f_min'],
+        'f_max': conf['data']['transform']['f_max'],
+    }
+
+    mfcc_transform = torchaudio.transforms.MFCC(sample_rate=conf['data']['transform']['sample_rate'],
+                                                n_mfcc=conf['data']['transform']['n_mfcc'],
+                                                melkwargs=mel_spectro_args,
+                                                )
     mask_pos = conf['masking']['position']
     k_frames = conf['masking']['k_frames']
 

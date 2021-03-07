@@ -26,15 +26,15 @@ used:
 Per second, this results in
 
 $$
-\text{FPS} = \text{sr} / \frac{\text{n_fft}}{2} = 16000 / \frac{400}{2} = 80
+\text{FPS} = \text{sr} / \frac{\text{fft size}}{2} = 16000 / \frac{400}{2} = 80
 $$
 
-frames. The goal is then to predict the $$k$$ frames based on $n$ given frames. Various experiments could be 
+frames. The goal is then to predict the $$k$$ frames based on $$n$$ given frames. Various experiments could be 
 interesting:
 - $$n$$ frames are given, calculate the $$k$$ subsequent frames
 - $$n$$ frames are given, calculate the $$k$$ previous frames
 - for both experiments: 
-  - start with a large $n$ and decrease it,
+  - start with a large $$n$$ and decrease it,
   - and/or start with a small $$k$$ and increase it
 
 
@@ -104,7 +104,7 @@ Currently, the following datasets are supported:
 | Dataset | Content | Sequence Length [avg. / std / (min-max) ]|
 |---------|---------|-----------------|
 | [Speech Commands](https://arxiv.org/abs/1804.03209) | 65,000 utterances of 30 short words | 1s / 0.0s (1s-1s) |
-| [TIMIT](https://catalog.ldc.upenn.edu/LDC93S1) | 630 speaker reading 10 sentences | 3.07s / 0.86s / (0.92s-7.79s  |
+| [TIMIT](https://catalog.ldc.upenn.edu/LDC93S1) | 630 speaker reading 10 sentences | 3.07s / 0.86s / (0.92s-7.79s)  |
 | [VoxCeleb2](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox2.html) | 1 million utterances for 6,112 speaker | -  |
 
 

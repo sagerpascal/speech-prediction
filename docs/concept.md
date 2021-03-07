@@ -29,17 +29,19 @@ $$
 \text{FPS} = \text{sr} / \frac{\text{n_fft}}{2} = 16000 / \frac{400}{2} = 80
 $$
 
-frames. The goal is then to predict the $k$ frames based on $n$ given frames. Various experiments could be interesting:
-- $n$ frames are given, calculate the $k$ subsequent frames
-- $n$ frames are given, calculate the $k$ previous frames
+frames. The goal is then to predict the $$k$$ frames based on $n$ given frames. Various experiments could be 
+interesting:
+- $$n$$ frames are given, calculate the $$k$$ subsequent frames
+- $$n$$ frames are given, calculate the $$k$$ previous frames
 - for both experiments: 
   - start with a large $n$ and decrease it,
-  - and/or start with a small $k$ and increase it
+  - and/or start with a small $$k$$ and increase it
 
 
 
 
-For the network, the $n$ given frames are the input data `x`, and the $k$ frames to be predicted are the label `y`. For
+For the network, the $$n$$ given frames are the input data `x`, and the $$k$$ frames to be predicted are the label `y`.
+For
 a first baseline, a simple Transfomer network is used. Currently, no literature exists comparing MFCC frame prediction 
 using different architectures. However, the decision for using a Transformer network is argued as follows:
 - Transformer achieved in 13/15 ASR benchmarks a better performance than RNN [1]
@@ -57,12 +59,12 @@ can generally be made. Therefore, at least one or two complete sentence should b
 on average of 20 words [4] (but this number is highly dependend on the dataset, older text consisted of avg. 60 words).
 The average speaker says 120-200 words per minute [5].
 
-To start with a rather simple example, we assume that 2 sentences must be given. To start with a rather simple example, 
-we assume that $$2$$ sentences must be given. With an average sentence length of $$20$$ words and an average speaker saying $$160$$
+To start with a rather simple example, we assume that $$2$$ sentences must be given. With an average sentence length 
+of $$20$$ words and an average speaker saying $$160$$
 words per minute, this corresponds to:
 
 $$
-$n$ = 40/160 = 0.25 \text{min.} = 15 \text{sec.}
+n = 40/160 = 0.25 \text{min.} = 15 \text{sec.}
 $$
 
 At the beginning only 1 frame should be predicted with it. Most NLP systems predict only a few words reliably. The number of correctly predicted words is strongly dependent on the data set and the input length. It is assumed that no more than 1-2 words can be predicted. 1 word corresponds in average to 
@@ -78,8 +80,8 @@ t_{\text{2 words}} = 2 \cdot 60 / 160 = 0.75s
 $$
 
 Therefore, the initial parameters are defined as follows:
-- $$n = 15 \text{sec.} = 1200 \text{frames} $$
-- $$k = 1 \text{frames} $$
+- $$n = 15 \text{sec.} = 1200$$ frames
+- $$k = 1$$ frames
   
 Then $$k$$ is continously increased until it has the size $$k = 0.375 \text{sec.} = 30 \text{frames} $$ (= predict one word).
 If this still works, $$k$$ can be increased to two words, meaning $$k = 0.75 \text{sec.} = 60 \text{frames} $$
@@ -95,12 +97,41 @@ If this still works, $$k$$ can be increased to two words, meaning $$k = 0.75 \te
 
 [5] Huang et al "Speech Rate and Pausing in English: Comparing learners at different levels of proficiency with native speakers"
 
-# Current Status
+# Datasets
 
-The application is still under development. So far, only a few experiments were conducted:
+Currently, the following datasets are supported:
+
+| Dataset | Content | Sequence Length [avg. / std / (min-max) ]|
+|---------|---------|-----------------|
+| [Speech Commands](https://arxiv.org/abs/1804.03209) | 65,000 utterances of 30 short words | 1s / 0.0s (1s-1s) |
+| [TIMIT](https://catalog.ldc.upenn.edu/LDC93S1) | 630 speaker reading 10 sentences | 3.07s / 0.86s / (0.92s-7.79s  |
+| [VoxCeleb2](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox2.html) | 1 million utterances for 6,112 speaker | -  |
 
 
-## Predict a Segment in a MFCC
+The Speech Commands Dataset consists of 65,000 one-second long utterances of 30 short words. Since one file only 
+contains one word, a part of the word is used to predict the rest of the word. This works well as shown in the next chapter.
+
+The TIMIT corpus contains recordings of 630 speakers of eight major dialects of American English, each reading ten 
+phonetically rich sentences.
+
+The VoxCeleb2 dataset contains over 1 million utterances for 6,112 celebrities, extracted from videos uploaded to 
+YouTube.
+
+In the two datasets "Speech Commands" and "TIMIT", the same words or sentences are spoken by different people. 
+Therefore, the neural network only has to learn these words and sentences. However, depending on the speaker,
+the words are pronounced differently, e.g. different dialect, pitch, speed, ...
+
+The VoxCeleb2 dataset is a lot more complex, because it contains different texts. The neural network can therefore no 
+longer learn a few specific sentences and speaker-dependent features. It has to build up a whole language model in the 
+background. At the moment it is doubted whether this is possible with the VoxCeleb2 dataset. On the one hand, audio 
+signals are much higher dimensional data than pure text. On the other hand, language models are trained with very 
+large corpus (e.g. 100 million words). However, the VoxCeleb2 dataset is much smaller and the words within the corpus 
+are not identical in the sense that each speaker pronounces them differently.
+
+
+## Explanation of the Concept: Predict a Segment in a MFCC
+In this section, the concept is explained using the Speech-Command Dataset. 
+
 1. Different waveforms from
    the [SPEECHCOMMANDS](https://pytorch.org/audio/stable/_modules/torchaudio/datasets/speechcommands.html) dataset are
    loaded. One command in the dataset is a men who says "eight":
@@ -148,7 +179,7 @@ The application is still under development. So far, only a few experiments were 
       <i>This is the MFCC signal, predicted by the network.</i>
    </p>
    
-## Predict Different Number of Frames
+### Predict Different Number of Frames
 At the end of an MFCC, $$k$$ frames were omitted. Then, a transformer network was trained to predict the missing $$k$$ frames.
 
 Different Input-Data:
@@ -180,6 +211,40 @@ The error tends to be slightly larger when more frames are masked (larger $$k$$)
 | MAE | MSE |
 |-----|-----|
 | <img src="assets/concept/mae_std_ex2.png" /> | <img src="assets/concept/mse_std_ex2.png" /> | 
+
+
+### TIMIT Dataset
+This concept works not only for single words but also for longer sequences like the sentences from the TIMIT dataset:
+
+<img src="assets/concept/result_timit.png" alt="MPrediction on the TIMIT dataset" />
+
+Original audio signal:
+<p align="center">
+   <audio controls>
+      <source src="assets/concept/waveform_TIMIT.wav" type="audio/wav">
+   </audio>
+</p>
+
+Converted to an MFCC:
+<p align="center">
+   <audio controls>
+      <source src="assets/concept/MFCC_TIMIT.wav" type="audio/wav">
+   </audio>
+</p>
+
+Masked MFCC (fed into the network):
+<p align="center">
+   <audio controls>
+      <source src="assets/concept/MFCC_masked_TIMIT.wav" type="audio/wav">
+   </audio>
+</p>
+
+Reconstructed MFCC (predicted by the network):
+<p align="center">
+   <audio controls>
+      <source src="assets/concept/MFCC_reconstructed_TIMIT.wav" type="audio/wav">
+   </audio>
+</p>
 
 
 

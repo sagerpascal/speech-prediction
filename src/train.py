@@ -165,14 +165,39 @@ def save_model(model, model_path, model_name, save_wandb=False):
         filename = 'model.pth'
         if os.path.exists(filename):
             os.remove(filename)
-        torch.save(model, filename)
+        torch.save(model.state_dict(), filename)
         wandb.save(filename)
         shutil.copy(filename, Path(model_path) / model_name)
     else:
         if os.path.exists(model_name):
             os.remove(model_name)
-        torch.save(model, Path(model_path) / model_name)
+        torch.save(model.state_dict(), Path(model_path) / model_name)
 
+
+def _save_logs(store, logs, mode, rank):
+    for k, v in logs.items():
+        store.set("{}:{}-{}".format(k, mode, rank), str(v))
+
+
+def save_logs_in_store(store, rank, train_logs, valid_logs):
+    _save_logs(store, train_logs, 'train', rank)
+    _save_logs(store, valid_logs, 'valid', rank)
+
+
+def _get_average_logs(conf, store, logs, mode):
+    avg_logs = {}
+    for k, v in logs.items():
+        key, val = k.split(':')[0], 0.
+        for rank in range(conf['world_size']):
+            val += float(store.get("{}:{}-{}".format(k, mode, rank)))
+        avg_logs[key] = val / conf['env']['world_size']
+    return avg_logs
+
+
+def calculate_average_logs(conf, store, train_logs, valid_logs):
+    train_logs_avg = _get_average_logs(conf, store, train_logs, 'train')
+    valid_logs_avg = _get_average_logs(conf, store, valid_logs, 'valid')
+    return train_logs_avg, valid_logs_avg
 
 
 def train(rank=None, world_size=None, conf=None):
@@ -184,6 +209,11 @@ def train(rank=None, world_size=None, conf=None):
         torch.cuda.manual_seed_all(42)
         setup(rank, world_size)
         logger.info("Running DDP on rank {}".format(rank))
+        store = dist.TCPStore("127.0.0.1",
+                              port=1234,
+                              world_size=conf['env']['world_size'],
+                              is_master=is_main_process,
+                              )
         model.to(rank)
         model = DDP(model, device_ids=[rank])
         device = rank
@@ -231,40 +261,50 @@ def train(rank=None, world_size=None, conf=None):
 
         train_logs = train_epoch.run(loader_train)
         valid_logs = valid_epoch.run(loader_val)
-        if conf['use_wandb'] and is_main_process:
-            wandb_log_epoch(i, train_logs, valid_logs)
 
-        dist.barrier()
+        if conf['env']['use_data_parallel']:
+            save_logs_in_store(store, rank, train_logs, valid_logs)
+            dist.barrier()
 
-        if valid_logs['loss'] < best_loss:
-            model_name = wandb.run.name if conf['use_wandb'] else 'tsc_acf'
-            model_path = '/workspace/data_pa/trained_models'
-            if is_main_process:
-                # for parallel models: only save file once!
+        if is_main_process:
+            train_logs, valid_logs = calculate_average_logs(conf, store, train_logs, valid_logs)
+            if conf['use_wandb']:
+                wandb_log_epoch(i, train_logs, valid_logs)
+
+            if valid_logs['loss'] < best_loss:
+                model_name = wandb.run.name if conf['use_wandb'] else 'tsc_acf'
+                model_path = '/workspace/data_pa/trained_models'
                 best_loss = valid_logs['loss']
 
                 save_model(model, model_path, model_name, save_wandb=conf['use_wandb'])
                 logger.info("Model saved (loss={})".format(best_loss))
-                count_not_improved = 1
+                count_not_improved = 0
 
-            if conf['env']['use_data_parallel']:
-                dist.barrier()  # Other processes have to load model saved by process 0
+                store.set("model_filename", Path(model_path) / model_name)
+                store.set("model_update_flag", str(True))
+
+            else:
+                count_not_improved += 1
+                store.set("model_update_flag", str(False))
+
+        if conf['env']['use_data_parallel']:
+            dist.barrier()  # Other processes have to load model saved by process 0
+            if bool(store.get("model_update_flag")):
                 map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
-                model.load_state_dict(torch.load(Path(model_path) / model_name, map_location=map_location))
-
-        elif is_main_process:
-            count_not_improved += 1
+                filename = store.get("model_filename").decode("utf-8")
+                model.load_state_dict(torch.load(filename, map_location=map_location))
 
         if i % 50 == 0 and is_main_process:
             model_name = "{}_backup".format(wandb.run.name) if conf['use_wandb'] else 'model_backup'
-            save_model(model, '/workspace/data_pa/trained_models', model_name, save_wandb=False)
+            save_model(model.state_dict(), '/workspace/data_pa/trained_models', model_name, save_wandb=False)
             logger.info("Model saved as backup after {} epochs".format(i))
 
         if conf['lr_scheduler']['activate']:
-            lr_scheduler.step(epoch=i)
+            lr_scheduler.step()
 
-        if train_logs['loss'] < 0.0001 or conf['train']['early_stopping'] and count_not_improved >= 5:
+        if is_main_process and train_logs['loss'] < 0.0001 or conf['train']['early_stopping'] and count_not_improved >= 5:
             logger.info("early stopping after {} epochs".format(i))
+            if conf['env']['use_data_parallel']:
+                # TODO: Fixme
+                raise KeyboardInterrupt
             break
-
-    return train_logs, valid_logs

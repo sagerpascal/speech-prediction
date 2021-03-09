@@ -118,16 +118,36 @@ def play_audio_files(conf, loader_test, model):
     original = original[:sample_end, :]
     x = x[:sample_end, :]
 
-    # Just for comparison...
-    reconstructed_orig = x.copy()
-    start_idx = np.min(np.argwhere(np.all(x == 0, axis=1)))
-    reconstructed_orig[start_idx:start_idx + y.shape[0], :] = y
-    reconstructed_orig = reconstructed_orig.T
+    # # Just for comparison...
+    # reconstructed_orig = x.copy()
+    # start_idx = np.min(np.argwhere(np.all(x == 0, axis=1)))
+    # reconstructed_orig[start_idx:start_idx + y.shape[0], :] = y
+    # reconstructed_orig = reconstructed_orig.T
+    #
+    # # reconstruct signal from input and prediction
+    # reconstructed = x.copy()
+    # reconstructed[start_idx:start_idx + y.shape[0], :] = y_pred
+    # reconstructed = reconstructed.T
 
-    # reconstruct signal from input and prediction
-    reconstructed = x.copy()
-    reconstructed[start_idx:start_idx + y.shape[0], :] = y_pred
+    reconstructed_orig = np.zeros((x.shape[0]+y.shape[0], x.shape[1]), dtype=np.float)
+    reconstructed = np.zeros((x.shape[0] + y.shape[0], x.shape[1]), dtype=np.float)
+
+    if conf['masking']['position'] == 'end':
+        reconstructed_orig[0:x.shape[0], :] = x
+        reconstructed_orig[x.shape[0]:, :] = y
+        reconstructed[0:x.shape[0], :] = x
+        reconstructed[x.shape[0]:, :] = y_pred
+    elif conf['masking']['position'] == 'beginning':
+        reconstructed_orig[0:y.shape[0], :] = y
+        reconstructed_orig[y.shape[0]:, :] = x
+        reconstructed[0:y.shape[0], :] = y_pred
+        reconstructed[y.shape[0]:, :] = x
+    else:
+        raise NotImplementedError()
+
+    reconstructed_orig = reconstructed_orig.T
     reconstructed = reconstructed.T
+
 
     if platform.system() == "Windows":
         print("Playing original sound...")
@@ -161,6 +181,8 @@ def play_audio_files(conf, loader_test, model):
                            mfcc_to_audio(x.T, hop_length=conf['data']['transform']['hop_length']))
     scipy.io.wavfile.write('MFCC_reconstructed.wav', conf['data']['transform']['sample_rate'],
                            mfcc_to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length']))
+    scipy.io.wavfile.write('MFCC_reconstructed_orig.wav', conf['data']['transform']['sample_rate'],
+                           mfcc_to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length']))
 
 
 def evaluate(conf):

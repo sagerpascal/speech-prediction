@@ -1,4 +1,4 @@
-mode: eval # either train or eval
+mode: train # either train or eval
 use_wandb: False
 
 # Environment
@@ -7,13 +7,13 @@ env:
 
 # Mask MFCC
 masking:
-  position: end # end, beginning or random
-  n_frames: 60 # max. number of input frames TODO: correct me, is currently number to predict
+  position: end # end, beginning or center
+  n_frames: 80 # max. number of input frames
   k_frames: 60 # number of frames to predict
 
 # Dataset
 data:
-  config_file: datasets/timit-original.yaml
+  config_file: datasets/vox2-original.yaml
 
 # Training settings
 train:

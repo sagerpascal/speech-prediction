@@ -35,7 +35,7 @@ def main(n_frames=None):
     if conf['mode'] == "train":
 
         if conf['env']['use_data_parallel']:
-            world_size = conf['world_size']
+            world_size = conf['env']['world_size']
             mp.spawn(train,
                      args=(world_size,conf),
                      nprocs=world_size,

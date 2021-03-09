@@ -12,7 +12,7 @@ from metrics import get_metrics
 from models.model import get_model
 from utils.log import format_logs
 from utils.meter import AverageValueMeter
-from datasets.collate import collate_fn
+from datasets.collate import collate_fn_debug
 
 
 def calc_metrics(conf, loader_test, model, metrics):
@@ -192,7 +192,7 @@ def evaluate(conf):
     conf['env']['world_size'] = 1
     conf['env']['use_data_parallel'] = False
     _, _, loader_test = get_loaders(conf, device=conf['device'])
-    loader_test.collate_fn = collate_fn(conf, debug=True)
+    loader_test.collate_fn = collate_fn_debug(conf)
     model = get_model(conf)
     metrics = get_metrics(conf)
 

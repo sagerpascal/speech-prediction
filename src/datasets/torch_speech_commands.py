@@ -6,12 +6,13 @@ import matplotlib.pyplot as plt
 import torch
 import torchaudio
 from torchaudio.datasets import SPEECHCOMMANDS
+from datasets.preprocessing import get_mfcc_transform, get_mfcc_preprocess_fn
 
 logger = logging.getLogger(__name__)
 
 
 class SubsetSC(SPEECHCOMMANDS):
-    def __init__(self, subset: str = None):
+    def __init__(self, conf, subset: str = None):
 
         if os.path.exists("../datasets/"):
             root = "../datasets/"
@@ -36,10 +37,18 @@ class SubsetSC(SPEECHCOMMANDS):
             excludes = set(excludes)
             self._walker = [w for w in self._walker if w not in excludes]
 
+        self.mfcc_transform = get_mfcc_transform(conf)
+        self.preprocess = get_mfcc_preprocess_fn(mask_pos=conf['masking']['position'],
+                                                 n_frames=conf['masking']['n_frames'],
+                                                 k_frames=conf['masking']['k_frames'])
+
     def __getitem__(self, item):
-        # only for debugging
         waveform, sample_rate, label, speaker_id, utterance_number = super().__getitem__(item)
-        return waveform, speaker_id, sample_rate, label, utterance_number
+
+        mfcc = self.mfcc_transform(waveform)
+        data, target = self.preprocess(mfcc)
+
+        return data, target, mfcc, waveform, speaker_id, sample_rate, label, utterance_number
 
 
 def analyze_some_data(dataset):

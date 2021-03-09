@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from datasets.torch_speech_commands import SubsetSC
 from datasets.dataset import AudioDataset
 from datasets.collate import collate_fn
+from datasets.preprocessing import get_mfcc_preprocess_fn
 
 
 def _get_loader(conf, train_set, val_set, test_set, rank=None):
@@ -40,7 +41,7 @@ def _get_loader(conf, train_set, val_set, test_set, rank=None):
         train_set,
         batch_size=conf['train']['batch_size'],
         shuffle=train_loader_shuffle,
-        collate_fn=collate_fn(conf),
+        collate_fn=collate_fn,
         num_workers=num_workers,
         pin_memory=pin_memory,
         sampler=train_sampler,
@@ -50,7 +51,7 @@ def _get_loader(conf, train_set, val_set, test_set, rank=None):
         batch_size=conf['train']['batch_size'],
         shuffle=val_loader_shuffle,
         drop_last=False,
-        collate_fn=collate_fn(conf),
+        collate_fn=collate_fn,
         num_workers=num_workers,
         pin_memory=pin_memory,
         sampler=valid_sampler,
@@ -60,7 +61,7 @@ def _get_loader(conf, train_set, val_set, test_set, rank=None):
         batch_size=conf['train']['batch_size'],
         shuffle=test_loader_shuffle,
         drop_last=False,
-        collate_fn=collate_fn(conf),
+        collate_fn=collate_fn,
         num_workers=num_workers,
         pin_memory=pin_memory,
         sampler=test_sampler,
@@ -70,9 +71,9 @@ def _get_loader(conf, train_set, val_set, test_set, rank=None):
 
 
 def _get_torch_speech_commands(conf, device):
-    train_set = SubsetSC("training")
-    val_set = SubsetSC("validation")
-    test_set = SubsetSC("testing")
+    train_set = SubsetSC(conf, "training")
+    val_set = SubsetSC(conf, "validation")
+    test_set = SubsetSC(conf, "testing")
 
     return _get_loader(conf, train_set, val_set, test_set, rank=device)
 
@@ -88,7 +89,7 @@ def _get_dataset(conf, device):
 def get_loaders(conf, device):
     if conf['data']['dataset'] == 'torch-speech-commands':
         return _get_torch_speech_commands(conf, device)
-    elif conf['data']['dataset'] == 'timit':
+    elif conf['data']['dataset'] == 'timit' or conf['data']['dataset'] == 'vox2':
         return _get_dataset(conf, device)
     else:
         raise AttributeError("Unknown dataset: {}".format(conf['data']['dataset']))

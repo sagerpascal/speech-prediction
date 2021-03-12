@@ -9,52 +9,63 @@ nav_order: 1
 As described in the [problem definition]({{ site.baseurl }}{% link index.md %}), the audio file is converted to a sequence
 of MFCC frames. To do so, the audio files are first loaded by the dataloader. Then, the function `torchaudio.transforms.MFCC`
 is used to calculate the MFCC frames. This function first calculates the MelSpectrogram (composition of Spectrogram and
-MelScale) and then creates the Mel-frequency cepstrum coefficients. For the calculation, the following parameters are 
-used:
+MelScale) and then creates the Mel-frequency cepstrum coefficients. For the calculation, the following default 
+parameters are suggested:
 
-> TODO: Could be better if not the whole audio file is loaded to calculate the MFCC (use only a part of it). Otherwise a batch is biased towards one speaker?!
-
-- `sample_rate` (Sample rate of audio signal): $$16000$$
-- `n_mfcc` (Number of mfcc coefficients to retain): $$20$$ or $$40$$
-- `win_length` (Window size): $$16000 * 0.03 = 400$$
-- `hop_length` (Length of hop between STFT windows): `win_length // 2` 
-- `n_fft` (Size of FFT, creates `n_fft // 2 + 1` bins): $$512$$
-- `f_min` (Minimum frequency for the Mel-Spectrogram): $$0$$
-- `f_max` (Maximum frequency for the Mel-Spectrogram): $$8000$$
+- `sample_rate` (Sample rate of audio signal): ``16000``
+- `n_mfcc` (Number of mfcc coefficients to retain):  ``40`` (or ``20``)
+- `win_length` (Window size): ``16000 * 0.03 = 400`` (or ``0.02``/ ``0.025``)
+- `hop_length` (Length of hop between STFT windows): `win_length // 2` (or ``0.01``)
+- `n_fft` (Size of FFT, creates `n_fft // 2 + 1` bins): ``512`` (or ``1024``)
+- `f_min` (Minimum frequency for the Mel-Spectrogram): ``0``
+- `f_max` (Maximum frequency for the Mel-Spectrogram): ``8000``
 
 
-Per second, this results in
+With this default settings, this results in
 
 $$
 \text{FPS} = \text{sr} / \frac{\text{fft size}}{2} = 16000 / \frac{400}{2} = 80
 $$
 
-frames. The goal is then to predict the $$k$$ frames based on $$n$$ given frames. Various experiments could be 
-interesting:
+frames per second. The goal is then to predict the $$k$$ frames based on $$n$$ given frames. Various experiments 
+could be conducted:
 - $$n$$ frames are given, calculate the $$k$$ subsequent frames
 - $$n$$ frames are given, calculate the $$k$$ previous frames
-- for both experiments: 
+- $$n/2$$ previous frames and $$n/2$$ subsequent frames are given, calculate the $$k$$ between them
+- for all experiments: 
   - start with a large $$n$$ and decrease it,
   - and/or start with a small $$k$$ and increase it
+  - with/without random positions of the masked frames per batch
 
-
-
-
+   
 For the network, the $$n$$ given frames are the input data `x`, and the $$k$$ frames to be predicted are the label `y`.
-For
-a first baseline, a simple Transfomer network is used. Currently, no literature exists comparing MFCC frame prediction 
-using different architectures. However, the decision for using a Transformer network is argued as follows:
+For a first baseline, a simple Transfomer network is used. Currently, no literature exists comparing MFCC frame 
+prediction using different architectures. However, the decision for using a Transformer network is argued as follows:
 - Transformer achieved in 13/15 ASR benchmarks a better performance than RNN [1]
 - Transformer are Turing-complete and can therefore model almost any sequence models [2]
 - Transformer have lower training-cost than RNN due to their self-attention [3]
-- Transformer can easily be combined with encoder and decoder architectures
+- Transformer can model longer dependencies than CNN without loosing resolution
+- Transformer can easily be combined with encoder and decoder architectures (e.g. combine it with CNN) [3]
 
 
 Suitable values must be found for the hyperparameters $$n$$ and $$k$$. At the beginning, it is recommended to start with a 
 simple task. This means that $$n$$ should be large and $$k$$ small. After that, one of the two parameters should be fixed 
 while the other is changed linearly. Determining the initial as well as final parameters $$n$$ and $$k$$ is quite difficult.
 
-The task is closely related to next-word prediction in NLP systems. When more data is given, more accurate predictions 
+The task is closely related to next-word prediction using N-gram model as applied in NLP systems. [6] showed that a
+prediction is more accurate if a larger $$N$$ is used. The authors suggested to consider a 5-gram model for word
+prediction in search engines. Since audio data is much higher dimensional than text, this is considered as already
+a lot of data.
+
+The average speaker says 120-200 words per minute [5]. Aussumed that 5 words must be given and an average speaker says 
+160 words per minute
+
+$$
+n = 5/160 = 0.03 \text{min.} = 1.875 \text{sec.} \approx 150 \text{frames}
+$$
+
+<!---
+When more data is given, more accurate predictions 
 can generally be made. Therefore, at least one or two complete sentence should be given at the beginning. One sentence consists
 on average of 20 words [4] (but this number is highly dependend on the dataset, older text consisted of avg. 60 words).
 The average speaker says 120-200 words per minute [5].
@@ -67,7 +78,10 @@ $$
 n = 40/160 = 0.25 \text{min.} = 15 \text{sec.}
 $$
 
-At the beginning only 1 frame should be predicted with it. Most NLP systems predict only a few words reliably. The number of correctly predicted words is strongly dependent on the data set and the input length. It is assumed that no more than 1-2 words can be predicted. 1 word corresponds in average to 
+-->
+
+At the beginning only 1 frame should be predicted. The number of correctly predicted words is strongly dependent on the data 
+set and the input length. It is assumed that no more than 1-2 words can be predicted. 1 word corresponds in average to 
 
 $$
 t_{\text{1 word}} = 60 / 160 = 0.375s
@@ -80,12 +94,30 @@ t_{\text{2 words}} = 2 \cdot 60 / 160 = 0.75s
 $$
 
 Therefore, the initial parameters are defined as follows:
-- $$n = 15 \text{sec.} = 1200$$ frames
+- $$n = 1.875 \text{sec.} = 150$$ frames
 - $$k = 1$$ frames
   
 Then $$k$$ is continously increased until it has the size $$k = 0.375 \text{sec.} = 30 \text{frames} $$ (= predict one word).
 If this still works, $$k$$ can be increased to two words, meaning $$k = 0.75 \text{sec.} = 60 \text{frames} $$
 
+## Proposed Experiments
+| Setup | Dataset (see below) | $$n_{beginning}$$ |  $$n_{end}$$ | $$k_{beginning}$$ |  $$k_{end}$$ | Use random pos. of masked frames |
+|-------|---------------------|-------------------|--------------|-------------------|--------------|----------------------------------|
+| Mask frames at the end | TIMIT | 150 | 150 | 1 | 60 | No |
+| Mask frames at the end | TIMIT | 150 | 150 | 1 | 60 | Yes |
+| Mask frames at the end | Vox2 | 150 | 150 | 1 | 60 | No |
+| Mask frames at the end | Vox2 | 150 | 150 | 1 | 60 | Yes |
+| Mask frames at the beginning | TIMIT | 150 | 150 | 1 | 60 | No |
+| Mask frames at the beginning | TIMIT | 150 | 150 | 1 | 60 | Yes |
+| Mask frames at the beginning | Vox2 | 150 | 150 | 1 | 60 | No |
+| Mask frames at the beginning | Vox2 | 150 | 150 | 1 | 60 | Yes |
+| Mask frames in the middle | TIMIT | 150 | 150 | 1 | 60 | No |
+| Mask frames in the middle | TIMIT | 150 | 150 | 1 | 60 | Yes |
+| Mask frames in the middle | Vox2 | 150 | 150 | 1 | 60 | No |
+| Mask frames in the middle | Vox2 | 150 | 150 | 1 | 60 | Yes |
+
+For each setup and dataset, a seperate model is trained. This model is then fine-tuned for each specific experiment 
+with the corresponding parameters.
 
 [1] S. Karita et al., "A Comparative Study on Transformer vs RNN in Speech Applications," 2019 IEEE Automatic Speech Recognition and Understanding Workshop (ASRU)
 
@@ -96,6 +128,8 @@ If this still works, $$k$$ can be increased to two words, meaning $$k = 0.75 \te
 [4] Moore, A. (December 22, 2011). The long sentence: A disservice to science in the Internet age. Retrieved November 23, 2015, from Wiley website: http://exchanges.wiley.com/blog/2011/12/22/the-long-sentence-a-disservice-to-science-in-the-internet-age/
 
 [5] Huang et al "Speech Rate and Pausing in English: Comparing learners at different levels of proficiency with native speakers"
+
+[6] Dumbali and Nagaraja, "Real Time Word Prediction Using N-Grams Model", 2019, International Journal of Innovative Technology and Exploring Engineering (IJITEE)
 
 # Datasets
 

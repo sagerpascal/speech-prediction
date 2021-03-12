@@ -101,20 +101,20 @@ Then $$k$$ is continously increased until it has the size $$k = 0.375 \text{sec.
 If this still works, $$k$$ can be increased to two words, meaning $$k = 0.75 \text{sec.} = 60 \text{frames} $$
 
 ## Proposed Experiments
-| Setup | Dataset (see below) | $$n_{beginning}$$ |  $$n_{end}$$ | $$k_{beginning}$$ |  $$k_{end}$$ | Use random pos. of masked frames |
-|-------|---------------------|-------------------|--------------|-------------------|--------------|----------------------------------|
-| Mask frames at the end | TIMIT | 150 | 150 | 1 | 60 | No |
-| Mask frames at the end | TIMIT | 150 | 150 | 1 | 60 | Yes |
-| Mask frames at the end | Vox2 | 150 | 150 | 1 | 60 | No |
-| Mask frames at the end | Vox2 | 150 | 150 | 1 | 60 | Yes |
-| Mask frames at the beginning | TIMIT | 150 | 150 | 1 | 60 | No |
-| Mask frames at the beginning | TIMIT | 150 | 150 | 1 | 60 | Yes |
-| Mask frames at the beginning | Vox2 | 150 | 150 | 1 | 60 | No |
-| Mask frames at the beginning | Vox2 | 150 | 150 | 1 | 60 | Yes |
-| Mask frames in the middle | TIMIT | 150 | 150 | 1 | 60 | No |
-| Mask frames in the middle | TIMIT | 150 | 150 | 1 | 60 | Yes |
-| Mask frames in the middle | Vox2 | 150 | 150 | 1 | 60 | No |
-| Mask frames in the middle | Vox2 | 150 | 150 | 1 | 60 | Yes |
+| Setup                        | Dataset (see below) | $$n_{beginning}$$ |  $$n_{end}$$ | $$k_{beginning}$$ |  $$k_{end}$$ | Use random pos. of masked frames |
+|------------------------------|---------------------|-------------------|--------------|-------------------|--------------|----------------------------------|
+| Mask frames at the end       | TIMIT               | 150               | 150          | 1                 | 60           | No                               |
+| Mask frames at the end       | TIMIT               | 150               | 150          | 1                 | 60           | Yes                              |
+| Mask frames at the end       | Vox2                | 150               | 150          | 1                 | 60           | No                               |
+| Mask frames at the end       | Vox2                | 150               | 150          | 1                 | 60           | Yes                              |
+| Mask frames at the beginning | TIMIT               | 150               | 150          | 1                 | 60           | No                               |
+| Mask frames at the beginning | TIMIT               | 150               | 150          | 1                 | 60           | Yes                              |
+| Mask frames at the beginning | Vox2                | 150               | 150          | 1                 | 60           | No                               |
+| Mask frames at the beginning | Vox2                | 150               | 150          | 1                 | 60           | Yes                              |
+| Mask frames in the middle    | TIMIT               | 150               | 150          | 1                 | 60           | No                               |
+| Mask frames in the middle    | TIMIT               | 150               | 150          | 1                 | 60           | Yes                              |
+| Mask frames in the middle    | Vox2                | 150               | 150          | 1                 | 60           | No                               |
+| Mask frames in the middle    | Vox2                | 150               | 150          | 1                 | 60           | Yes                              |
 
 For each setup and dataset, a seperate model is trained. This model is then fine-tuned for each specific experiment 
 with the corresponding parameters.

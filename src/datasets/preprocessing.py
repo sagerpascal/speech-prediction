@@ -27,10 +27,11 @@ def get_mfcc_transform(conf):
 class PreprocessEnd(nn.Module):
     """ must be a class, otherwise multiprocessing won't work """
 
-    def __init__(self, n_frames, k_frames):
+    def __init__(self, n_frames, k_frames, use_random_pos):
         super(PreprocessEnd, self).__init__()
         self.n_frames = n_frames
         self.k_frames = k_frames
+        self.use_random_pos = use_random_pos
 
     def forward(self, mfcc):
         if mfcc.shape[2] < self.k_frames:
@@ -48,20 +49,21 @@ class PreprocessEnd(nn.Module):
         else:
             # Select a random section of the MFCC, the first part is used as data x and the second as target y
             # use a random segment of the length n_frames + k_frames
-            random_start_index = random.randint(0, mfcc.shape[2] - (self.n_frames + self.k_frames + 1))
-            data = mfcc.detach().clone()[:, :, random_start_index:random_start_index + self.n_frames]
+            start_index = random.randint(0, mfcc.shape[2] - (self.n_frames + self.k_frames + 1)) if self.use_random_pos else 0
+            data = mfcc.detach().clone()[:, :, start_index:start_index + self.n_frames]
             target = mfcc.detach().clone()[:, :,
-                     random_start_index + self.n_frames:random_start_index + self.n_frames + self.k_frames]
+                     start_index + self.n_frames:start_index + self.n_frames + self.k_frames]
         return data, target
 
 
 class PreprocessBeginning(nn.Module):
     """ must be a class, otherwise multiprocessing won't work """
 
-    def __init__(self, n_frames, k_frames):
+    def __init__(self, n_frames, k_frames, use_random_pos):
         super(PreprocessBeginning, self).__init__()
         self.n_frames = n_frames
         self.k_frames = k_frames
+        self.use_random_pos = use_random_pos
 
     def forward(self, mfcc):
         if mfcc.shape[2] < self.k_frames:
@@ -78,20 +80,21 @@ class PreprocessBeginning(nn.Module):
         else:
             # Select a random section of the MFCC, the first part is used as target y and the second as data x
             # use a random segment of the length n_frames + k_frames
-            random_start_index = random.randint(0, mfcc.shape[2] - (self.n_frames + self.k_frames + 1))
-            target = mfcc.detach().clone()[:, :, random_start_index:random_start_index + self.k_frames]
+            start_index = random.randint(0, mfcc.shape[2] - (self.n_frames + self.k_frames + 1)) if self.use_random_pos else 0
+            target = mfcc.detach().clone()[:, :, start_index:start_index + self.k_frames]
             data = mfcc.detach().clone()[:, :,
-                   random_start_index + self.k_frames:random_start_index + self.k_frames + self.n_frames]
+                   start_index + self.k_frames:start_index + self.k_frames + self.n_frames]
         return data, target
 
 
 class PreprocessCenter(nn.Module):
     """ must be a class, otherwise multiprocessing won't work """
 
-    def __init__(self, n_frames, k_frames):
+    def __init__(self, n_frames, k_frames, use_random_pos):
         super(PreprocessCenter, self).__init__()
         self.n_frames = n_frames
         self.k_frames = k_frames
+        self.use_random_pos = use_random_pos
 
     def forward(self, mfcc):
         if mfcc.shape[2] < self.k_frames:
@@ -111,23 +114,23 @@ class PreprocessCenter(nn.Module):
         else:
             # Data: start_index -> start_index+n1 and start_index+n1+k_frames -> start_index+n_frames+k_frames
             # Target: start_index+n1 -> start_index+n1+k_frames
-            random_start_index = random.randint(0, mfcc.shape[2] - (self.n_frames + self.k_frames + 1))
+            start_index = random.randint(0, mfcc.shape[2] - (self.n_frames + self.k_frames + 1)) if self.use_random_pos else 0
             n1 = self.n_frames // 2
-            target = mfcc.detach().clone()[:, :, random_start_index + n1:random_start_index + n1 + self.k_frames]
-            data = torch.cat((mfcc.detach().clone()[:, :, random_start_index:random_start_index + n1],
+            target = mfcc.detach().clone()[:, :, start_index + n1:start_index + n1 + self.k_frames]
+            data = torch.cat((mfcc.detach().clone()[:, :, start_index:start_index + n1],
                               mfcc.detach().clone()[:, :,
-                              random_start_index + n1 + self.k_frames:random_start_index + self.k_frames + self.n_frames]),
+                              start_index + n1 + self.k_frames:start_index + self.k_frames + self.n_frames]),
                              2)
 
         return data, target
 
 
-def get_mfcc_preprocess_fn(mask_pos, n_frames, k_frames):
+def get_mfcc_preprocess_fn(mask_pos, n_frames, k_frames, use_random_pos):
     if mask_pos == 'beginning':
-        return PreprocessBeginning(n_frames=n_frames, k_frames=k_frames)
+        return PreprocessBeginning(n_frames=n_frames, k_frames=k_frames, use_random_pos=use_random_pos)
     elif mask_pos == 'center':
-        return PreprocessCenter(n_frames=n_frames, k_frames=k_frames)
+        return PreprocessCenter(n_frames=n_frames, k_frames=k_frames, use_random_pos=use_random_pos)
     elif mask_pos == 'end':
-        return PreprocessEnd(n_frames=n_frames, k_frames=k_frames)
+        return PreprocessEnd(n_frames=n_frames, k_frames=k_frames, use_random_pos=use_random_pos)
     else:
         raise AttributeError("Unknown value set for parameter mask_pos: {}".format(mask_pos))

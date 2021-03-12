@@ -40,7 +40,8 @@ class SubsetSC(SPEECHCOMMANDS):
         self.mfcc_transform = get_mfcc_transform(conf)
         self.preprocess = get_mfcc_preprocess_fn(mask_pos=conf['masking']['position'],
                                                  n_frames=conf['masking']['n_frames'],
-                                                 k_frames=conf['masking']['k_frames'])
+                                                 k_frames=conf['masking']['k_frames'],
+                                                 use_random_pos=conf['masking']['use_random_pos'])
 
     def __getitem__(self, item):
         waveform, sample_rate, label, speaker_id, utterance_number = super().__getitem__(item)

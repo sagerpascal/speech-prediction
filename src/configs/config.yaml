@@ -10,6 +10,7 @@ masking:
   position: end # end, beginning or center
   n_frames: 80 # max. number of input frames
   k_frames: 60 # number of frames to predict
+  use_random_pos: False
 
 # Dataset
 data:

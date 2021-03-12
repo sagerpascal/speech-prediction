@@ -30,7 +30,8 @@ class AudioDataset(Dataset):
         self.mfcc_transform = get_mfcc_transform(conf).to('cuda')
         self.preprocess = get_mfcc_preprocess_fn(mask_pos=conf['masking']['position'],
                                                  n_frames=conf['masking']['n_frames'],
-                                                 k_frames=conf['masking']['k_frames'])
+                                                 k_frames=conf['masking']['k_frames'],
+                                                 use_random_pos=conf['masking']['use_random_pos'])
 
     def __getitem__(self, item):
 

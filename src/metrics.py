@@ -23,7 +23,7 @@ class MAE(MeanAbsoluteError):
     __name__ = 'Mean Absolute Error'
 
 
-def get_metrics(conf):
+def get_metrics(conf, device):
     metrics = [#ExplainedVarianceUA(),
                #ExplainedVarianceVW(),
                MSE(),
@@ -31,5 +31,5 @@ def get_metrics(conf):
                ]
 
     for m in metrics:
-        m.to(conf['device'])
+        m.to(device)
     return metrics

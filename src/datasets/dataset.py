@@ -3,7 +3,7 @@ from pathlib import Path
 import torchaudio
 from torch.utils.data import Dataset
 from datasets.preprocessing import get_mfcc_transform, get_mfcc_preprocess_fn
-
+import os
 
 # http://www.openslr.org/12/
 # https://lionbridge.ai/datasets/best-speech-recognition-datasets-for-machine-learning/
@@ -27,7 +27,7 @@ class AudioDataset(Dataset):
             raise AttributeError("Unknown mode: {}".format(mode))
 
         self.df = pd.read_csv(df_fp)
-        self.mfcc_transform = get_mfcc_transform(conf)
+        self.mfcc_transform = get_mfcc_transform(conf).to('cuda')
         self.preprocess = get_mfcc_preprocess_fn(mask_pos=conf['masking']['position'],
                                                  n_frames=conf['masking']['n_frames'],
                                                  k_frames=conf['masking']['k_frames'])

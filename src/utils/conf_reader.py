@@ -24,7 +24,7 @@ def get_config():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--learning_rate", default=0.005, help="The learning rate")
+    parser.add_argument("--learning_rate", default=0.05, help="The learning rate")
     parser.add_argument("--load_model", default=None, help="path to the model to load")
     args = parser.parse_args()
 

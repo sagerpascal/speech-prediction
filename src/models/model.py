@@ -14,18 +14,18 @@ from .encoder.vgg import VGGExtractor
 logger = logging.getLogger(__name__)
 
 
-def get_model(conf):
+def get_model(conf, device):
     if 'load_model' in conf and conf['load_model'] != 'None':
         try:
             model = torch.load("data/trained_models/{}.pth".format(conf['load_model']),
-                               map_location=torch.device(conf['device']))
+                               map_location=torch.device(device))
         except FileNotFoundError:
             try:
                 model = torch.load("../data/trained_models/{}.pth".format(conf['load_model']),
-                               map_location=torch.device(conf['device']))
+                               map_location=torch.device(device))
             except FileNotFoundError:
                 model = torch.load("trained_models/{}.pth".format(conf['load_model']),
-                                   map_location=torch.device(conf['device']))
+                                   map_location=torch.device(device))
 
     else:
         # custom_encoder = VGGExtractor().to(conf['device'])

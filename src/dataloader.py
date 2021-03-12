@@ -1,17 +1,14 @@
 import platform
-import torch
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 from datasets.torch_speech_commands import SubsetSC
 from datasets.dataset import AudioDataset
 from datasets.collate import collate_fn
-from datasets.preprocessing import get_mfcc_preprocess_fn
 
 
 def _get_loader(conf, train_set, val_set, test_set, rank=None):
     if "cuda" in conf['device']:
-        num_workers = 0 if platform.system() == "Windows" else 1
-        num_workers = num_workers * torch.cuda.device_count() if conf['env']['use_data_parallel'] else num_workers
+        num_workers = 0 if platform.system() == "Windows" else 4
         pin_memory = True
     else:
         num_workers = 0

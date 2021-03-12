@@ -30,21 +30,21 @@ logger = logging.getLogger(__name__)
 
 class Epoch:
 
-    def __init__(self, model, loss, metrics, conf, stage_name, verbose=True):
+    def __init__(self, model, loss, metrics, device, conf, stage_name, verbose=True):
         self.model = model
         self.loss = loss
         self.metrics = metrics
+        self.device = device
         self.conf = conf
         self.stage_name = stage_name
         self.verbose = verbose
         self._to_device()
 
     def _to_device(self):
-        device = self.conf['device']
-        self.model.to(device)
-        self.loss.to(device)
+        self.model.to(self.device)
+        self.loss.to(self.device)
         for m in self.metrics:
-            m.to(device)
+            m.to(self.device)
 
     def batch_update(self, x, y):
         raise NotImplementedError
@@ -61,7 +61,7 @@ class Epoch:
 
         with tqdm(dataloader_, desc=self.stage_name, file=sys.stdout, disable=not self.verbose) as iterator:
             for x, y in iterator:
-                x, y = x.to(self.conf['device']), y.to(self.conf['device'])
+                x, y = x.to(self.device), y.to(self.device)
 
                 # train the network with one batch
                 loss, y_pred = self.batch_update(x, y)
@@ -89,11 +89,12 @@ class Epoch:
 
 class TrainEpoch(Epoch):
 
-    def __init__(self, model, loss, metrics, conf, optimizer, verbose=True):
+    def __init__(self, model, loss, metrics, device, conf, optimizer, verbose=True):
         super().__init__(
             model=model,
             loss=loss,
             metrics=metrics,
+            device=device,
             conf=conf,
             stage_name='train',
             verbose=verbose,
@@ -115,11 +116,12 @@ class TrainEpoch(Epoch):
 
 
 class ValidEpoch(Epoch):
-    def __init__(self, model, loss, metrics, conf, verbose=True):
+    def __init__(self, model, loss, metrics, device, conf, verbose=True):
         super().__init__(
             model=model,
             loss=loss,
             metrics=metrics,
+            device=device,
             conf=conf,
             stage_name='valid',
             verbose=verbose,
@@ -135,6 +137,10 @@ class ValidEpoch(Epoch):
             output = self.model.forward(x, y)
             loss = torch.nn.functional.mse_loss(output, y)
         return loss, output
+
+
+def setup_wandb(conf):
+    return wandb.init(project="ASR {}".format(conf['data']['dataset']), job_type='train')
 
 
 def wandb_log_settings(conf, loader_train, loader_val):
@@ -188,7 +194,7 @@ def _get_average_logs(conf, store, logs, mode):
     avg_logs = {}
     for k, v in logs.items():
         key, val = k.split(':')[0], 0.
-        for rank in range(conf['world_size']):
+        for rank in range(conf['env']['world_size']):
             val += float(store.get("{}:{}-{}".format(k, mode, rank)))
         avg_logs[key] = val / conf['env']['world_size']
     return avg_logs
@@ -203,12 +209,12 @@ def calculate_average_logs(conf, store, train_logs, valid_logs):
 def train(rank=None, world_size=None, conf=None):
     is_main_process = not conf['env']['use_data_parallel'] or conf['env']['use_data_parallel'] and rank == 0
 
-    model = get_model(conf)
-
     if conf['env']['use_data_parallel']:
         torch.cuda.manual_seed_all(42)
         setup(rank, world_size)
         logger.info("Running DDP on rank {}".format(rank))
+        device = rank
+        model = get_model(conf, device)
         store = dist.TCPStore("127.0.0.1",
                               port=1234,
                               world_size=conf['env']['world_size'],
@@ -216,15 +222,15 @@ def train(rank=None, world_size=None, conf=None):
                               )
         model.to(rank)
         model = DDP(model, device_ids=[rank])
-        device = rank
     else:
         device = conf['device']
+        model = get_model(conf, device)
         model.to(device)
 
     loader_train, loader_val, _ = get_loaders(conf, device)
     loss = get_loss(conf)
     optimizer = get_optimizer(conf, model)
-    metrics = get_metrics(conf)
+    metrics = get_metrics(conf, device)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                    step_size=conf['lr_scheduler']['step_size'],
                                                    gamma=conf['lr_scheduler']['gamma'])
@@ -234,6 +240,7 @@ def train(rank=None, world_size=None, conf=None):
         loss=loss,
         metrics=metrics,
         optimizer=optimizer,
+        device=device,
         verbose=is_main_process,
         conf=conf
     )
@@ -242,11 +249,14 @@ def train(rank=None, world_size=None, conf=None):
         model=model,
         loss=loss,
         metrics=metrics,
+        device=device,
         verbose=is_main_process,
         conf=conf
     )
 
+    wandb_run = None
     if conf['use_wandb'] and is_main_process:
+        wandb_run = setup_wandb(conf)
         wandb_log_settings(conf, loader_train, loader_val)
 
     best_loss = 9999999
@@ -267,7 +277,8 @@ def train(rank=None, world_size=None, conf=None):
             dist.barrier()
 
         if is_main_process:
-            train_logs, valid_logs = calculate_average_logs(conf, store, train_logs, valid_logs)
+            if conf['env']['use_data_parallel']:
+                train_logs, valid_logs = calculate_average_logs(conf, store, train_logs, valid_logs)
             if conf['use_wandb']:
                 wandb_log_epoch(i, train_logs, valid_logs)
 
@@ -302,9 +313,13 @@ def train(rank=None, world_size=None, conf=None):
         if conf['lr_scheduler']['activate']:
             lr_scheduler.step()
 
-        if is_main_process and train_logs['loss'] < 0.0001 or conf['train']['early_stopping'] and count_not_improved >= 5:
+        if is_main_process and train_logs['loss'] < 0.0001 or conf['train'][
+            'early_stopping'] and count_not_improved >= 5:
             logger.info("early stopping after {} epochs".format(i))
             if conf['env']['use_data_parallel']:
                 # TODO: Fixme
                 raise KeyboardInterrupt
             break
+
+    if wandb_run is not None:
+        wandb_run.finish()

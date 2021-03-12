@@ -192,9 +192,9 @@ def evaluate(conf):
     conf['env']['world_size'] = 1
     conf['env']['use_data_parallel'] = False
     _, _, loader_test = get_loaders(conf, device=conf['device'])
-    loader_test.collate_fn = collate_fn_debug(conf)
-    model = get_model(conf)
-    metrics = get_metrics(conf)
+    loader_test.collate_fn = collate_fn_debug
+    model = get_model(conf, conf['device'])
+    metrics = get_metrics(conf, conf['device'])
 
     # plot_one_predicted_batch(conf, loader_test, model)
     play_audio_files(conf, loader_test, model)

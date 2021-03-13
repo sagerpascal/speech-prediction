@@ -5,6 +5,10 @@ paths:
     train: vox2-orig-train.csv
     val: vox2-orig-val.csv
     test: vox2-orig-test.csv
+  h5:
+    train: VOX2/vox2_mfcc_train.h5
+    val: VOX2/vox2_mfcc_val.h5
+    test: VOX2/vox2_mfcc_test.h5
 
 transform:
   sample_rate: 16000

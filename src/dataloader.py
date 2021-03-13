@@ -3,6 +3,7 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 from datasets.torch_speech_commands import SubsetSC
 from datasets.dataset import AudioDataset
+from datasets.dataset_h5 import AudioDatasetH5
 from datasets.collate import collate_fn
 
 
@@ -76,9 +77,14 @@ def _get_torch_speech_commands(conf, device):
 
 
 def _get_dataset(conf, device):
-    train_set = AudioDataset(conf, mode='train')
-    val_set = AudioDataset(conf, mode='val')
-    test_set = AudioDataset(conf, mode='test')
+    if conf.get('data').get('paths').get('h5') is not None:
+        train_set = AudioDatasetH5(conf, mode='train')
+        val_set = AudioDatasetH5(conf, mode='val')
+        test_set = AudioDatasetH5(conf, mode='test')
+    else:
+        train_set = AudioDataset(conf, mode='train')
+        val_set = AudioDataset(conf, mode='val')
+        test_set = AudioDataset(conf, mode='test')
 
     return _get_loader(conf, train_set, val_set, test_set, rank=device)
 

@@ -11,7 +11,6 @@ from utils.conf_reader import get_config
 import h5py
 from dataloader import get_loaders
 import copy
-from datasets.collate import collate_fn_h5
 from datasets.preprocessing import get_mfcc_transform
 import torch
 import logging

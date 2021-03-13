@@ -3,7 +3,6 @@ from pathlib import Path
 import torchaudio
 from torch.utils.data import Dataset
 from datasets.preprocessing import get_mfcc_transform, get_mfcc_preprocess_fn
-import os
 
 # http://www.openslr.org/12/
 # https://lionbridge.ai/datasets/best-speech-recognition-datasets-for-machine-learning/

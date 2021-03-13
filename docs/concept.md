@@ -10,15 +10,16 @@ As described in the [problem definition]({{ site.baseurl }}{% link index.md %}),
 of MFCC frames. To do so, the audio files are first loaded by the dataloader. Then, the function `torchaudio.transforms.MFCC`
 is used to calculate the MFCC frames. This function first calculates the MelSpectrogram (composition of Spectrogram and
 MelScale) and then creates the Mel-frequency cepstrum coefficients. For the calculation, the following default 
-parameters are suggested:
+parameters are suggested Based on ([7], [8]):
 
 - `sample_rate` (Sample rate of audio signal): ``16000``
 - `n_mfcc` (Number of mfcc coefficients to retain):  ``40`` (or ``20``)
-- `win_length` (Window size): ``16000 * 0.03 = 400`` (or ``0.02``/ ``0.025``)
-- `hop_length` (Length of hop between STFT windows): `win_length // 2` (or ``0.01``)
-- `n_fft` (Size of FFT, creates `n_fft // 2 + 1` bins): ``512`` (or ``1024``)
+- `win_length` (Window size): ``16000 * 0.03 = 400`` (or ``0.02``, ``0.025``)
+- `hop_length` (Length of hop between STFT windows): `win_length // 2` (or ``// 4``)
+- `n_fft` (Size of FFT, creates `n_fft // 2 + 1` bins): ``512`` (or ``1024``, ``2048``)
 - `f_min` (Minimum frequency for the Mel-Spectrogram): ``0``
 - `f_max` (Maximum frequency for the Mel-Spectrogram): ``8000``
+- `n_mels` (Number of mel filterbanks): `128`
 
 
 With this default settings, this results in
@@ -39,7 +40,8 @@ could be conducted:
 
    
 For the network, the $$n$$ given frames are the input data `x`, and the $$k$$ frames to be predicted are the label `y`.
-For a first baseline, a simple Transfomer network is used. Currently, no literature exists comparing MFCC frame 
+For a first baseline, a simple Transfomer network is used. Alternatives could be different RNNs, such as LSTM or 
+CNNs with downsampling and upsampling such as a U-Net. Currently, no literature exists comparing MFCC frame 
 prediction using different architectures. However, the decision for using a Transformer network is argued as follows:
 - Transformer achieved in 13/15 ASR benchmarks a better performance than RNN [1]
 - Transformer are Turing-complete and can therefore model almost any sequence models [2]
@@ -124,13 +126,18 @@ with the corresponding parameters.
 
 [2] Pérez et al., "On the Turing Completeness of Modern Neural Network Architectures," 2019 ICLR 
 
-[3] Vaswani et al, "Attention Is All you Need", 2017 NIPS
+[3] Vaswani et al., "Attention Is All you Need", 2017 NIPS
 
 [4] Moore, A. (December 22, 2011). The long sentence: A disservice to science in the Internet age. Retrieved November 23, 2015, from Wiley website: http://exchanges.wiley.com/blog/2011/12/22/the-long-sentence-a-disservice-to-science-in-the-internet-age/
 
 [5] Huang et al "Speech Rate and Pausing in English: Comparing learners at different levels of proficiency with native speakers"
 
 [6] Dumbali and Nagaraja, "Real Time Word Prediction Using N-Grams Model", 2019, International Journal of Innovative Technology and Exploring Engineering (IJITEE)
+
+[7] Neururer et al., "Exploiting the Full Information of Varying-Length Utterances for DNN-Based Speaker Verification"
+Master Thesis, ZHAW, 2020.
+
+[8] Tuggener et al., "Design Patterns for Resource-Constrained Automated Deep-Learning Methods", 2020, MDPI
 
 # Datasets
 

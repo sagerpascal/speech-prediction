@@ -283,15 +283,17 @@ def train(rank=None, world_size=None, conf=None):
                 wandb_log_epoch(i, train_logs, valid_logs)
 
             if valid_logs['loss'] < best_loss:
-                model_name = wandb.run.name if conf['use_wandb'] else 'tsc_acf'
-                model_path = '/workspace/data_pa/trained_models'
                 best_loss = valid_logs['loss']
+                model_name = wandb.run.name if conf['use_wandb'] else 'tsc_acf'
+                model_name = "{}.pth".format(model_name)
+                model_path = '/workspace/data_pa/trained_models'
 
                 save_model(model, model_path, model_name, save_wandb=conf['use_wandb'])
                 logger.info("Model saved (loss={})".format(best_loss))
                 count_not_improved = 0
 
-                store.set("model_filename", Path(model_path) / model_name)
+                model_fp = Path(model_path) / model_name
+                store.set("model_filename", str(model_fp.resolve()))
                 store.set("model_update_flag", str(True))
 
             else:
@@ -300,14 +302,14 @@ def train(rank=None, world_size=None, conf=None):
 
         if conf['env']['use_data_parallel']:
             dist.barrier()  # Other processes have to load model saved by process 0
-            if bool(store.get("model_update_flag")):
+            if not is_main_process and bool(store.get("model_update_flag")):
                 map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
                 filename = store.get("model_filename").decode("utf-8")
                 model.load_state_dict(torch.load(filename, map_location=map_location))
 
         if i % 50 == 0 and is_main_process:
-            model_name = "{}_backup".format(wandb.run.name) if conf['use_wandb'] else 'model_backup'
-            save_model(model.state_dict(), '/workspace/data_pa/trained_models', model_name, save_wandb=False)
+            model_name = "{}_backup.pth".format(wandb.run.name) if conf['use_wandb'] else 'model_backup.pth'
+            save_model(model, '/workspace/data_pa/trained_models', model_name, save_wandb=False)
             logger.info("Model saved as backup after {} epochs".format(i))
 
         if conf['lr_scheduler']['activate']:

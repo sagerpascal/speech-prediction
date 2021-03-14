@@ -3,7 +3,7 @@ use_wandb: True
 
 # Environment
 env:
-  world_size: 1 # number of GPUs to run a batch in parallel
+  world_size: 3 # number of GPUs to run a batch in parallel
 
 # Mask MFCC
 masking:
@@ -18,7 +18,7 @@ data:
 
 # Training settings
 train:
-  batch_size: 128
+  batch_size: 64
   max_number_of_epochs: 1000
   early_stopping: False
 

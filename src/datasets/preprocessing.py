@@ -32,19 +32,25 @@ class PreprocessEnd(nn.Module):
         self.n_frames = n_frames
         self.k_frames = k_frames
         self.use_random_pos = use_random_pos
+        self.ignored_count = 0
+        self.too_small_count = 0
 
     def forward(self, mfcc):
         if mfcc.shape[2] < self.k_frames:
             # mfcc contains less frames than we want to predict
             data = torch.zeros((mfcc.shape[0], mfcc.shape[1], self.n_frames), dtype=torch.float)
             target = torch.zeros((mfcc.shape[0], mfcc.shape[1], self.k_frames), dtype=torch.float)
-            logger.info("MFCC is smaller than frames we want to predict... ignore it")
+            if self.ignored_count % 500:
+                logger.debug("{} MFCCs were smaller than frames we want to predict... ignored them".format(self.ignored_count))
+            self.ignored_count += 1
 
         elif mfcc.shape[2] <= self.n_frames + self.k_frames:
             target_index = mfcc.shape[2] - self.k_frames
             data = mfcc.detach().clone()[:, :, :target_index]
             target = mfcc.detach().clone()[:, :, target_index:]
-            logger.debug("MFCC is smaller than n_frames+k_frames...")
+            if self.too_small_count % 1000:
+                logger.debug("{} MFCCs were smaller than n_frames+k_frames...".format(self.too_small_count))
+            self.too_small_count += 1
 
         else:
             # Select a random section of the MFCC, the first part is used as data x and the second as target y

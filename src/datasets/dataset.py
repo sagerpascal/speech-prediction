@@ -32,6 +32,13 @@ class AudioDataset(Dataset):
                                                  k_frames=conf['masking']['k_frames'],
                                                  use_random_pos=conf['masking']['use_random_pos'])
 
+        self.k_frames = conf['masking']['k_frames']
+        self.n_frames = conf['masking']['n_frames']
+
+        # ignore all files < k_frames + n_frames
+        self.df = self.df[self.df['MFCC_length'] >= (self.n_frames + self.k_frames)]
+        print("{} set has {} valid entries".format(mode, len(self.df)))
+
     def __getitem__(self, item):
 
         waveform = torchaudio.load(self.df['file_path'][item])

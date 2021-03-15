@@ -6,7 +6,6 @@ from pathlib import Path
 import torch
 import wandb
 from tqdm.auto import tqdm
-import models
 import numpy as np
 from dataloader import get_loaders
 from loss import get_loss

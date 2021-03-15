@@ -5,7 +5,7 @@ from dataloader import get_loaders
 from utils.conf_reader import get_config
 from datasets.collate import collate_fn
 
-os.chdir('../')
+
 
 def plot_data_examples():
     """
@@ -53,4 +53,5 @@ def plot_data_examples():
 
 
 if __name__ == '__main__':
+    os.chdir('../')
     plot_data_examples()

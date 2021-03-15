@@ -118,14 +118,73 @@ def create_df_vox2():
     print("Total {}/{}".format(len(df_train) + len(df_val) + len(df_test), 2256492 / 2))
 
 
-def add_to_file(conf, i, mfcc_start, mfcc, speaker, filename, mfcc_d, speaker_d, filepath_d, meta_d):
+def add_to_file(conf, i, mfcc_start, mfcc, speaker, filename, mfcc_d, speaker_d, filepath_d, meta_d, vox2=True):
     mfcc_end = mfcc_start + mfcc.shape[2]
     mfcc_d.resize((1, conf['data']['transform']['n_mfcc'], mfcc_end))
     mfcc_d[:, :, mfcc_start:mfcc_end] = mfcc
     speaker_d[i, :] = speaker
-    filepath_d[i, :] = speaker + "/" + filename
+    filepath_d[i, :] = speaker + "/" + filename if vox2 else filename
     meta_d[i, :] = np.array([mfcc_start, mfcc_end])
     return mfcc_end
+
+
+def _create_h5_file_timit(conf, df_fp, h5_name, df_name):
+    df = pd.read_csv(df_fp)
+    mfcc_transform = get_mfcc_transform(conf).to('cuda')
+    number_of_entries = len(df)
+
+    f_h5 = h5py.File(h5_name, 'w', libver='latest')
+    mfcc_dataset = f_h5.create_dataset('MFCC', (1, conf['data']['transform']['n_mfcc'], 1),
+                                              maxshape=(1, conf['data']['transform']['n_mfcc'], None), chunks=True,
+                                              dtype='float32')
+    speaker_dataset = f_h5.create_dataset('Speaker', (number_of_entries, 1), 'S7')
+    filepath_dataset = f_h5.create_dataset('Filepath', (number_of_entries, 1), 'S30')
+    meta_dataset = f_h5.create_dataset('META', (number_of_entries, 2), dtype='int64')
+
+    mfcc_start = 0
+    indexes, mfcc_starts, mfcc_ends, mfcc_lengths, speakers = [], [], [], [], []
+
+    for index, row in tqdm(df.iterrows(), total=len(df)):
+        waveform = torchaudio.load(row['file_path'])
+        mfcc = mfcc_transform(waveform[0].to('cuda'))
+        speaker = row['speaker']
+        filename = row['file_path'][len('/workspace/data_pa/TIMIT/AUDIO_FILES/ORIGINAL/'):]
+
+        indexes.append(index)
+        mfcc_starts.append(mfcc_start)
+        mfcc_lengths.append(mfcc.shape[2])
+        speakers.append(speaker)
+
+        mfcc_end = add_to_file(conf, index, mfcc_start, mfcc.cpu(), speaker, filename,
+                                      mfcc_dataset, speaker_dataset, filepath_dataset,
+                                      meta_dataset, vox2=False)
+
+        mfcc_ends.append(mfcc_end)
+        mfcc_start = mfcc_end
+
+    df = pd.DataFrame.from_dict({
+        'MFCC_start': mfcc_starts,
+        'MFCC_end': mfcc_ends,
+        'MFCC_length': mfcc_lengths,
+        'Speaker': speakers
+    })
+
+    df.to_csv(r'{}.csv'.format(df_name), index=False)
+
+
+def create_h5_file_timit():
+    conf = get_config()
+    assert conf['data']['dataset'] == 'timit'
+
+    df_base_path = Path('datasets/dfs')
+    train_fp = df_base_path / conf['data']['paths']['df']['train']
+    val_fp = df_base_path / conf['data']['paths']['df']['val']
+    test_fp = df_base_path / conf['data']['paths']['df']['test']
+
+    _create_h5_file_timit(conf, train_fp, 'timit_mfcc_train.h5', 'timit_metadata_train')
+    _create_h5_file_timit(conf, val_fp, 'timit_mfcc_valid.h5', 'timit_metadata_valid')
+    _create_h5_file_timit(conf, test_fp, 'timit_mfcc_test.h5', 'timit_metadata_test')
+
 
 
 def create_h5_file_vox2():
@@ -208,26 +267,70 @@ def create_h5_file_vox2():
     f_valid_new.close()
 
 
+def _create_df_metadata_vox2_h5(h5_fp, df_name):
+    h5_file = h5py.File(h5_fp, 'r', libver='latest', swmr=True)
+
+    print("Create metadata for file {}".format(h5_file))
+
+    mfcc_starts, mfcc_ends, mfcc_lengths, speakers = [], [], [], []
+
+    for i in tqdm(range(len(h5_file['META']))):
+        mfcc_start, mfcc_end = h5_file['META'][i]
+        speaker = h5_file['Speaker'][i][0].decode('ascii')
+        mfcc_length = mfcc_end - mfcc_start
+
+        if not mfcc_length == 0:
+            mfcc_starts.append(mfcc_start)
+            mfcc_ends.append(mfcc_end)
+            mfcc_lengths.append(mfcc_length)
+            speakers.append(speaker)
+
+    df = pd.DataFrame.from_dict({
+        'MFCC_start': mfcc_starts,
+        'MFCC_end': mfcc_ends,
+        'MFCC_length': mfcc_lengths,
+        'Speaker': speakers
+    })
+
+    df.to_csv(r'{}.csv'.format(df_name), index=False)
+
+
+def create_metadata_h5_vox2():
+    base_path = Path('/workspace/data_pa/VOX2')
+    _create_df_metadata_vox2_h5(base_path / 'vox2_mfcc_train.h5', 'vox2_metadata_train')
+    _create_df_metadata_vox2_h5(base_path / 'vox2_mfcc_valid.h5', 'vox2_metadata_valid')
+    _create_df_metadata_vox2_h5(base_path / 'vox2_mfcc_test.h5', 'vox2_metadata_test')
+
+
+def _add_lengths_df_timit(conf, df_fp):
+    df = pd.read_csv(df_fp)
+    mfcc_transform = get_mfcc_transform(conf).to('cuda')
+
+    indexes, mfcc_lengths = [], []
+
+    for index, row in tqdm(df.iterrows(), total=len(df)):
+        waveform = torchaudio.load(row['file_path'])
+        mfcc = mfcc_transform(waveform[0].to('cuda'))
+        mfcc_lengths.append(mfcc.shape[2])
+        indexes.append(index)
+
+    df['MFCC_length'] = mfcc_lengths
+    df.to_csv(df_fp, index=False)
+
+
+def create_metadata_timit():
+    conf = get_config()
+    assert conf['data']['dataset'] == 'timit'
+
+    df_base_path = Path('datasets/dfs')
+    train_fp = df_base_path / conf['data']['paths']['df']['train']
+    val_fp = df_base_path / conf['data']['paths']['df']['val']
+    test_fp = df_base_path / conf['data']['paths']['df']['test']
+
+    _add_lengths_df_timit(conf, train_fp)
+    _add_lengths_df_timit(conf, val_fp)
+    _add_lengths_df_timit(conf, test_fp)
+
 if __name__ == '__main__':
     os.chdir('../')
-    create_h5_file_vox2()
-    # conf = get_config()
-    # from datasets.dataset import AudioDataset
-    # from torch.utils.data import Subset
-    #
-    # conf['train']['batch_size'] = 1
-    # train_loader, valid_loader, test_loader = get_loaders(conf, 'cuda')
-    # train_loader.collate_fn = collate_fn_h5
-    # f = h5py.File('vox2-train.h5', 'r')
-    #
-    # it = iter(train_loader)
-    #
-    # for i in range(20):
-    #     mfcc, sizes, speaker = next(it)
-    #     mfcc_start, mfcc_end = f['META'][i]
-    #     mfcc2 = f['MFCC'][:, :, mfcc_start:mfcc_end]
-    #     # waveform2 = f['Waveform'][:, waveform_start:waveform_end]
-    #     speaker2 = f['Speaker'][i]
-    #     assert np.all(mfcc2 == mfcc)
-    #     # assert np.all(waveform2 == waveform.numpy())
-    #     assert speaker2[0].decode('ascii') == speaker
+    create_h5_file_timit()

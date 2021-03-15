@@ -5,6 +5,14 @@ paths:
     train: timit-orig-train.csv
     val: timit-orig-val.csv
     test: timit-orig-test.csv
+  h5:
+    train: TIMIT/timit_mfcc_train.h5
+    val: TIMIT/timit_mfcc_valid.h5
+    test: TIMIT/timit_mfcc_test.h5
+    metadata:
+      train: timit_metadata_train.csv
+      val: timit_metadata_valid.csv
+      test: timit_metadata_test.csv
 
 transform:
   sample_rate: 16000

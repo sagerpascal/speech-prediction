@@ -139,7 +139,10 @@ class ValidEpoch(Epoch):
 
 
 def setup_wandb(conf):
-    return wandb.init(project="ASR {}".format(conf['data']['dataset']), job_type='train')
+    run = wandb.init(project="ASR {}".format(conf['data']['dataset']), job_type='train')
+    wandb.run.name = 'n={} k={}'.format(conf['masking']['n_frames'], conf['masking']['k_frames'])
+    wandb.run.save()
+    return run
 
 
 def wandb_log_settings(conf, loader_train, loader_val):
@@ -151,10 +154,11 @@ def wandb_log_settings(conf, loader_train, loader_val):
     wandb.config.update({**conf, **add_logs})
 
 
-def wandb_log_epoch(n_epoch, lr, train_logs, valid_logs):
+def wandb_log_epoch(n_epoch, lr, best_loss, train_logs, valid_logs):
     logs = {
         'epoch': n_epoch,
         'learning rate': lr,
+        'smallest loss': best_loss,
     }
     for k, v in train_logs.items():
         logs[k + " train"] = v
@@ -279,8 +283,6 @@ def train(rank=None, world_size=None, conf=None):
         if is_main_process:
             if conf['env']['use_data_parallel']:
                 train_logs, valid_logs = calculate_average_logs(conf, store, train_logs, valid_logs)
-            if conf['use_wandb']:
-                wandb_log_epoch(i, get_lr(optimizer), train_logs, valid_logs)
 
             if valid_logs['loss'] < best_loss:
                 best_loss = valid_logs['loss']
@@ -297,9 +299,13 @@ def train(rank=None, world_size=None, conf=None):
                     store.set("model_filename", str(model_fp.resolve()))
                     store.set("model_update_flag", str(True))
 
-            elif conf['env']['use_data_parallel']:
+            else:
                 count_not_improved += 1
-                store.set("model_update_flag", str(False))
+                if conf['env']['use_data_parallel']:
+                    store.set("model_update_flag", str(False))
+
+            if conf['use_wandb']:
+                wandb_log_epoch(i, get_lr(optimizer), best_loss, train_logs, valid_logs)
 
         if conf['env']['use_data_parallel']:
             dist.barrier()  # Other processes have to load model saved by process 0

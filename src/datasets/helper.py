@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import torchaudio
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from utils.conf_reader import get_config

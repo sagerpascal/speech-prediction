@@ -5,13 +5,13 @@ import sys
 from pathlib import Path
 import torch
 import wandb
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import numpy as np
 from dataloader import get_loaders
 from loss import get_loss
 from metrics import get_metrics
 from models.model import get_model
-from optimizer import get_optimizer, optimizer_to
+from optimizer import get_optimizer, get_lr
 from utils.log import format_logs
 from utils.meter import AverageValueMeter
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -151,9 +151,10 @@ def wandb_log_settings(conf, loader_train, loader_val):
     wandb.config.update({**conf, **add_logs})
 
 
-def wandb_log_epoch(n_epoch, train_logs, valid_logs):
+def wandb_log_epoch(n_epoch, lr, train_logs, valid_logs):
     logs = {
         'epoch': n_epoch,
+        'learning rate': lr,
     }
     for k, v in train_logs.items():
         logs[k + " train"] = v
@@ -279,7 +280,7 @@ def train(rank=None, world_size=None, conf=None):
             if conf['env']['use_data_parallel']:
                 train_logs, valid_logs = calculate_average_logs(conf, store, train_logs, valid_logs)
             if conf['use_wandb']:
-                wandb_log_epoch(i, train_logs, valid_logs)
+                wandb_log_epoch(i, get_lr(optimizer), train_logs, valid_logs)
 
             if valid_logs['loss'] < best_loss:
                 best_loss = valid_logs['loss']
@@ -291,11 +292,12 @@ def train(rank=None, world_size=None, conf=None):
                 logger.info("Model saved (loss={})".format(best_loss))
                 count_not_improved = 0
 
-                model_fp = Path(model_path) / model_name
-                store.set("model_filename", str(model_fp.resolve()))
-                store.set("model_update_flag", str(True))
+                if conf['env']['use_data_parallel']:
+                    model_fp = Path(model_path) / model_name
+                    store.set("model_filename", str(model_fp.resolve()))
+                    store.set("model_update_flag", str(True))
 
-            else:
+            elif conf['env']['use_data_parallel']:
                 count_not_improved += 1
                 store.set("model_update_flag", str(False))
 

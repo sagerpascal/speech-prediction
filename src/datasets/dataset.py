@@ -30,7 +30,7 @@ class AudioDataset(Dataset):
         self.preprocess = get_mfcc_preprocess_fn(mask_pos=conf['masking']['position'],
                                                  n_frames=conf['masking']['n_frames'],
                                                  k_frames=conf['masking']['k_frames'],
-                                                 use_random_pos=conf['masking']['use_random_pos'])
+                                                 start_idx=conf['masking']['start_idx'])
 
         self.k_frames = conf['masking']['k_frames']
         self.n_frames = conf['masking']['n_frames']

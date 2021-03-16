@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import random
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 from dataloader import get_loaders
 from metrics import get_metrics

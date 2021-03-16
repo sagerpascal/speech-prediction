@@ -27,28 +27,35 @@ def get_mfcc_transform(conf):
 class Preprocess(nn.Module):
     """ must be a class, otherwise multiprocessing won't work """
 
-    def __init__(self, n_frames, k_frames, use_random_pos):
+    def __init__(self, n_frames, k_frames, start_idx):
         super(Preprocess, self).__init__()
         self.n_frames = n_frames
         self.k_frames = k_frames
-        self.use_random_pos = use_random_pos
+        self.start_idx = start_idx
 
     def forward(self, mfcc):
         if mfcc.shape[2] < self.k_frames:
             # mfcc contains less frames than we want to predict -> set data and target to 0
-            data = torch.zeros((mfcc.shape[0], mfcc.shape[1], self.n_frames), dtype=torch.float)
-            target = torch.zeros((mfcc.shape[0], mfcc.shape[1], self.k_frames), dtype=torch.float)
+            # data = torch.zeros((mfcc.shape[0], mfcc.shape[1], self.n_frames), dtype=torch.float)
+            # target = torch.zeros((mfcc.shape[0], mfcc.shape[1], self.k_frames), dtype=torch.float)
             logger.error("MFCC is smaller than frames we want to predict... ignored")
-            return data, target
+            raise RuntimeError("MFCC too small!")
+            # return data, target
 
-        elif mfcc.shape[2] <= self.n_frames + self.k_frames:
+        elif mfcc.shape[2] < self.n_frames + self.k_frames:
             logger.error("MFCC is smaller than n_frames+k_frames...")
             return self.forward_action_to_small(mfcc)
 
         else:
-            start_index = random.randint(0, mfcc.shape[2] - (self.n_frames + self.k_frames + 1)) if self.use_random_pos\
-                else 0
-            return self.forward_action(mfcc, start_index)
+            if self.start_idx == 'beginning' or self.start_idx == 'sliding-window' or mfcc.shape[2] == self.n_frames + self.k_frames:
+                if self.start_idx == 'sliding-window':
+                    assert mfcc.shape[2] == self.n_frames + self.k_frames
+                idx = 0
+            elif self.start_idx == 'random':
+                idx = random.randint(0, mfcc.shape[2] - (self.n_frames + self.k_frames + 1))
+            else:
+                raise AttributeError("Unknown value set for parameter start_idx: {}".format(self.start_idx))
+            return self.forward_action(mfcc, idx)
 
     def forward_action_too_small(self, mfcc):
         pass
@@ -110,12 +117,12 @@ class PreprocessCenter(Preprocess):
         return data, target
 
 
-def get_mfcc_preprocess_fn(mask_pos, n_frames, k_frames, use_random_pos):
+def get_mfcc_preprocess_fn(mask_pos, n_frames, k_frames, start_idx):
     if mask_pos == 'beginning':
-        return PreprocessBeginning(n_frames=n_frames, k_frames=k_frames, use_random_pos=use_random_pos)
+        return PreprocessBeginning(n_frames=n_frames, k_frames=k_frames, start_idx=start_idx)
     elif mask_pos == 'center':
-        return PreprocessCenter(n_frames=n_frames, k_frames=k_frames, use_random_pos=use_random_pos)
+        return PreprocessCenter(n_frames=n_frames, k_frames=k_frames, start_idx=start_idx)
     elif mask_pos == 'end':
-        return PreprocessEnd(n_frames=n_frames, k_frames=k_frames, use_random_pos=use_random_pos)
+        return PreprocessEnd(n_frames=n_frames, k_frames=k_frames, start_idx=start_idx)
     else:
         raise AttributeError("Unknown value set for parameter mask_pos: {}".format(mask_pos))

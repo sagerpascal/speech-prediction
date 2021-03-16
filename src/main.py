@@ -51,5 +51,3 @@ def main(n_frames=None):
 if __name__ == '__main__':
     init()
     main()
-    # from datasets.helper import create_h5_file_vox2
-    # create_h5_file_vox2()

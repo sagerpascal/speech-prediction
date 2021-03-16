@@ -12,7 +12,7 @@ is used to calculate the MFCC frames. This function first calculates the MelSpec
 MelScale) and then creates the Mel-frequency cepstrum coefficients. For the calculation, the following default 
 parameters are suggested Based on ([7], [8]):
 
-- `sample_rate` (Sample rate of audio signal): ``16000``
+- `sample_rate` (Sample rate of audio signal): ``16000`` (or ``8000``)
 - `n_mfcc` (Number of mfcc coefficients to retain):  ``40`` (or ``20``)
 - `win_length` (Window size): ``16000 * 0.03 = 400`` (or ``0.02``, ``0.025``)
 - `hop_length` (Length of hop between STFT windows): `win_length // 2` (or ``// 4``)

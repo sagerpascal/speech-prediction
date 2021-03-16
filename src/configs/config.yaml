@@ -3,30 +3,30 @@ use_wandb: True
 
 # Environment
 env:
-  world_size: 3 # number of GPUs to run a batch in parallel
+  world_size: 1 # number of GPUs to run a batch in parallel
 
 # Mask MFCC
 masking:
   position: end # end, beginning or center
-  n_frames: 80 # max. number of input frames
+  n_frames: 60 # max. number of input frames
   k_frames: 60 # number of frames to predict
-  use_random_pos: False
+  start_idx: sliding-window # beginning (first n+k frames affected per file), random (n+k frames at random position per file), sliding-window (first n+k frames, then shift by n+k -> multiple frames per file)
 
 # Dataset
 data:
-  config_file: datasets/vox2-original.yaml
+  config_file: datasets/timit-original.yaml
 
 # Training settings
 train:
-  batch_size: 64
-  max_number_of_epochs: 1000
+  batch_size: 32
+  max_number_of_epochs: 300
   early_stopping: False
 
 # LR Scheduler
 lr_scheduler:
-  activate: False
-  step_size: 30
-  gamma: 0.5
+  activate: True
+  step_size: 10
+  gamma: 0.8
 
 # Optimizer
 optimizer:

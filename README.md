@@ -1,4 +1,4 @@
-# Importance of the Temporal Context for ASR
+# Importance of the Temporal Context for Speaker Recognition
 
 A neural network to predict a frame of speech (MFCC) from its predecessor - more iformation will follow.
 

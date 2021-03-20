@@ -76,11 +76,11 @@ def _get_torch_speech_commands(conf, device):
     return _get_loader(conf, train_set, val_set, test_set, rank=device)
 
 
-def _get_dataset(conf, device):
+def _get_dataset(conf, device, with_waveform):
     if conf.get('data').get('paths').get('h5') is not None:
-        train_set = AudioDatasetH5(conf, mode='train')
-        val_set = AudioDatasetH5(conf, mode='val')
-        test_set = AudioDatasetH5(conf, mode='test')
+        train_set = AudioDatasetH5(conf, mode='train', with_waveform=with_waveform)
+        val_set = AudioDatasetH5(conf, mode='val', with_waveform=with_waveform)
+        test_set = AudioDatasetH5(conf, mode='test', with_waveform=with_waveform)
     else:
         train_set = AudioDataset(conf, mode='train')
         val_set = AudioDataset(conf, mode='val')
@@ -89,10 +89,10 @@ def _get_dataset(conf, device):
     return _get_loader(conf, train_set, val_set, test_set, rank=device)
 
 
-def get_loaders(conf, device):
+def get_loaders(conf, device, with_waveform=False):
     if conf['data']['dataset'] == 'torch-speech-commands':
         return _get_torch_speech_commands(conf, device)
     elif conf['data']['dataset'] == 'timit' or conf['data']['dataset'] == 'vox2':
-        return _get_dataset(conf, device)
+        return _get_dataset(conf, device, with_waveform=with_waveform)
     else:
         raise AttributeError("Unknown dataset: {}".format(conf['data']['dataset']))

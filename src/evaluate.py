@@ -13,6 +13,7 @@ from models.model import get_model
 from utils.log import format_logs
 from utils.meter import AverageValueMeter
 from datasets.collate import collate_fn_debug
+from datasets.normalization import undo_zero_norm
 
 
 def calc_metrics(conf, loader_test, model, metrics):
@@ -21,7 +22,7 @@ def calc_metrics(conf, loader_test, model, metrics):
     metrics_meters = {metric.__name__: AverageValueMeter() for metric in metrics}
 
     with tqdm(loader_test, desc='evaluate (test set)', file=sys.stdout) as iterator:
-        for x, y, _, _, _ in iterator:
+        for x, y, *_ in iterator:
 
             x, y = x.to(conf['device']), y.to(conf['device'])
             with torch.no_grad():
@@ -48,6 +49,8 @@ def calc_metrics(conf, loader_test, model, metrics):
 
 
 def plot_one_predicted_batch(conf, loader_test, model):
+    mean, std = conf['data']['stats']['train']['std'], conf['data']['stats']['train']['mean']
+
     it_loader_test = iter(loader_test)
     data, target, mfccs, waveforms = next(it_loader_test)
 
@@ -57,34 +60,46 @@ def plot_one_predicted_batch(conf, loader_test, model):
         y_pred = model.forward(x_t, y_t)
 
     for i in range(random.randint(0, len(waveforms))):
-        waveform = waveforms[i].numpy()
+        waveform = waveforms[i]
         mfcc = mfccs[:, i, :].squeeze().t().numpy()
         data_x = data[:, i, :].squeeze().t().numpy()
         label_gt = target[:, i, :].squeeze().t().numpy()
         label_pr = y_pred[:, i, :].squeeze().t().cpu().numpy()
 
+        mfcc = undo_zero_norm(mfcc, mean, std)
+        data_x = undo_zero_norm(data_x, mean, std)
+        label_gt = undo_zero_norm(label_gt, mean, std)
+        label_pr = undo_zero_norm(label_pr, mean, std)
+
         vmin, vmax = np.min(mfcc), np.max(mfcc)
 
-        fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(15, 15))
-        gs = axs[0, 0].get_gridspec()
-        axs[0, 0].remove()
-        axs[0, 1].remove()
-        axbig = fig.add_subplot(gs[0, :])
-        axbig.plot(waveform.T)
-        axbig.set_title("Waveform")
-        axs[1, 0].imshow(mfcc, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
-        axs[1, 0].set_title("Original MFCC")
-        axs[1, 1].imshow(data_x, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
-        axs[1, 1].set_title("Input Data")
-        axs[2, 0].imshow(label_gt, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
-        axs[2, 0].set_title("Groud Truth")
-        axs[2, 1].imshow(label_pr, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
-        axs[2, 1].set_title("Prediction")
+        if waveform is not None:
+            fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(15, 15))
+            gs = axs[0, 0].get_gridspec()
+            axs[0, 0].remove()
+            axs[0, 1].remove()
+            axbig = fig.add_subplot(gs[0, :])
+            axbig.plot(waveform.numpy().T)
+            axbig.set_title("Waveform")
+            offset = 1
+        else:
+            fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(15, 15))
+            offset = 0
+        axs[0 + offset, 0].imshow(mfcc, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
+        axs[0 + offset, 0].set_title("Original MFCC")
+        axs[0 + offset, 1].imshow(data_x, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
+        axs[0 + offset, 1].set_title("Input Data")
+        axs[1 + offset, 0].imshow(label_gt, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
+        axs[1 + offset, 0].set_title("Groud Truth")
+        axs[1 + offset, 1].imshow(label_pr, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
+        axs[1 + offset, 1].set_title("Prediction")
         plt.tight_layout()
         plt.show()
 
 
 def play_audio_files(conf, loader_test, model):
+    mean, std = conf['data']['stats']['train']['std'], conf['data']['stats']['train']['mean']
+
     if platform.system() == "Windows":
         import sounddevice as sd
     from librosa.feature.inverse import mfcc_to_audio
@@ -112,6 +127,11 @@ def play_audio_files(conf, loader_test, model):
     x = x.cpu().numpy()
     y = y.cpu().numpy()
 
+    original = undo_zero_norm(original, mean, std)
+    y_pred = undo_zero_norm(y_pred, mean, std)
+    x = undo_zero_norm(x, mean, std)
+    y = undo_zero_norm(y, mean, std)
+
     # cut away padding
     sample_end = np.min(np.argwhere(np.all(original == 0, axis=1)))
     waveform = waveform[:sample_end]
@@ -129,7 +149,7 @@ def play_audio_files(conf, loader_test, model):
     # reconstructed[start_idx:start_idx + y.shape[0], :] = y_pred
     # reconstructed = reconstructed.T
 
-    reconstructed_orig = np.zeros((x.shape[0]+y.shape[0], x.shape[1]), dtype=np.float)
+    reconstructed_orig = np.zeros((x.shape[0] + y.shape[0], x.shape[1]), dtype=np.float)
     reconstructed = np.zeros((x.shape[0] + y.shape[0], x.shape[1]), dtype=np.float)
 
     if conf['masking']['position'] == 'end':
@@ -147,7 +167,6 @@ def play_audio_files(conf, loader_test, model):
 
     reconstructed_orig = reconstructed_orig.T
     reconstructed = reconstructed.T
-
 
     if platform.system() == "Windows":
         print("Playing original sound...")
@@ -186,12 +205,12 @@ def play_audio_files(conf, loader_test, model):
 
 
 def evaluate(conf):
-    if not 'load_model' in conf or conf['load_model'] == 'None':
+    if 'load_weights' not in conf or conf['load_weights'] == 'None':
         raise AttributeError("Load a model to run evaluation script (invalid config)")
 
     conf['env']['world_size'] = 1
     conf['env']['use_data_parallel'] = False
-    _, _, loader_test = get_loaders(conf, device=conf['device'])
+    _, _, loader_test = get_loaders(conf, device=conf['device'], with_waveform=True)
     loader_test.collate_fn = collate_fn_debug
     model = get_model(conf, conf['device'])
     metrics = get_metrics(conf, conf['device'])

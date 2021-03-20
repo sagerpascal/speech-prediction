@@ -7,6 +7,7 @@ import torch
 import torchaudio
 from torchaudio.datasets import SPEECHCOMMANDS
 from datasets.preprocessing import get_mfcc_transform, get_mfcc_preprocess_fn
+from datasets.normalization import zero_norm
 
 logger = logging.getLogger(__name__)
 
@@ -37,16 +38,22 @@ class SubsetSC(SPEECHCOMMANDS):
             excludes = set(excludes)
             self._walker = [w for w in self._walker if w not in excludes]
 
+        self.mean, self.std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
+
         self.mfcc_transform = get_mfcc_transform(conf)
         self.preprocess = get_mfcc_preprocess_fn(mask_pos=conf['masking']['position'],
                                                  n_frames=conf['masking']['n_frames'],
                                                  k_frames=conf['masking']['k_frames'],
                                                  start_idx=conf['masking']['start_idx'])
 
+        if conf['masking']['start_idx'] == 'sliding-window':
+            raise NotImplementedError("Commands are to short to support sliding window")
+
     def __getitem__(self, item):
         waveform, sample_rate, label, speaker_id, utterance_number = super().__getitem__(item)
 
         mfcc = self.mfcc_transform(waveform)
+        mfcc = zero_norm(mfcc, self.mean, self.std) # normalize
         data, target = self.preprocess(mfcc)
 
         return data, target, mfcc, waveform, speaker_id, sample_rate, label, utterance_number

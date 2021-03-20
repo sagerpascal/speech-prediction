@@ -51,14 +51,15 @@ class Epoch:
     def on_epoch_start(self):
         pass
 
-    def run(self, dataloader_):
+    def run(self, dataloader_, epoch_n):
         self.on_epoch_start()
 
         logs = {}
         loss_meter = AverageValueMeter()
         metrics_meters = {metric.__name__: AverageValueMeter() for metric in self.metrics}
 
-        with tqdm(dataloader_, desc=self.stage_name, file=sys.stdout, disable=not self.verbose) as iterator:
+        with tqdm(dataloader_, desc="{} (Epoch {})".format(self.stage_name, epoch_n + 1), file=sys.stdout,
+                  disable=not self.verbose) as iterator:
             for x, y in iterator:
                 x, y = x.to(self.device), y.to(self.device)
 
@@ -139,8 +140,8 @@ class ValidEpoch(Epoch):
 
 
 def setup_wandb(conf):
-    run = wandb.init(project="ASR {}".format(conf['data']['dataset']), job_type='train')
-    wandb.run.name = 'n={} k={}'.format(conf['masking']['n_frames'], conf['masking']['k_frames'])
+    run = wandb.init(project="tsc-{}".format(conf['data']['dataset']), job_type='train')
+    # wandb.run.name = 'n={} k={}'.format(conf['masking']['n_frames'], conf['masking']['k_frames'])
     wandb.run.save()
     return run
 
@@ -273,8 +274,8 @@ def train(rank=None, world_size=None, conf=None):
             loader_val.sampler.set_epoch(i)
             dist.barrier()
 
-        train_logs = train_epoch.run(loader_train)
-        valid_logs = valid_epoch.run(loader_val)
+        train_logs = train_epoch.run(loader_train, i)
+        valid_logs = valid_epoch.run(loader_val, i)
 
         if conf['env']['use_data_parallel']:
             save_logs_in_store(store, rank, train_logs, valid_logs)

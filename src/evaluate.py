@@ -49,7 +49,7 @@ def calc_metrics(conf, loader_test, model, metrics):
 
 
 def plot_one_predicted_batch(conf, loader_test, model):
-    mean, std = conf['data']['stats']['train']['std'], conf['data']['stats']['train']['mean']
+    mean, std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
 
     it_loader_test = iter(loader_test)
     data, target, mfccs, waveforms = next(it_loader_test)
@@ -98,7 +98,7 @@ def plot_one_predicted_batch(conf, loader_test, model):
 
 
 def play_audio_files(conf, loader_test, model):
-    mean, std = conf['data']['stats']['train']['std'], conf['data']['stats']['train']['mean']
+    mean, std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
 
     if platform.system() == "Windows":
         import sounddevice as sd
@@ -113,7 +113,7 @@ def play_audio_files(conf, loader_test, model):
         x, y, original, waveform = next(it_loader_test)
 
     # only use one example from batch -> select a random batch
-    random_idx = random.randint(0, len(waveform) - 1)
+    random_idx = random.randint(0, x.shape[1] - 1)
     x = x[:, random_idx, :]
     y = y[:, random_idx, :]
 
@@ -121,22 +121,27 @@ def play_audio_files(conf, loader_test, model):
         x_t, y_t = x.unsqueeze(1).to(conf['device']), y.unsqueeze(1).to(conf['device'])
         y_pred = model.forward(x_t, y_t).squeeze()
 
-    waveform = waveform[random_idx].numpy()
+    if waveform[random_idx] is not None:
+        waveform = waveform[random_idx].numpy()
+    else:
+        waveform = None
     original = original[:, random_idx, :].squeeze().cpu().numpy()
     y_pred = y_pred.cpu().numpy()
     x = x.cpu().numpy()
     y = y.cpu().numpy()
 
     original = undo_zero_norm(original, mean, std)
-    y_pred = undo_zero_norm(y_pred, mean, std)
     x = undo_zero_norm(x, mean, std)
     y = undo_zero_norm(y, mean, std)
+    y_pred = undo_zero_norm(y_pred, mean, std)
 
     # cut away padding
-    sample_end = np.min(np.argwhere(np.all(original == 0, axis=1)))
-    waveform = waveform[:sample_end]
-    original = original[:sample_end, :]
-    x = x[:sample_end, :]
+    if np.any(np.all(original == 0, axis=1)):
+        sample_end = np.min(np.argwhere(np.all(original == 0, axis=1)))
+        original = original[:sample_end, :]
+        x = x[:sample_end, :]
+        if waveform is not None:
+            waveform = waveform[:sample_end]
 
     # # Just for comparison...
     # reconstructed_orig = x.copy()
@@ -169,9 +174,10 @@ def play_audio_files(conf, loader_test, model):
     reconstructed = reconstructed.T
 
     if platform.system() == "Windows":
-        print("Playing original sound...")
-        time.sleep(0.5)
-        sd.play(waveform.T, conf['data']['transform']['sample_rate'], blocking=True)
+        if waveform is not None:
+            print("Playing original sound...")
+            time.sleep(0.5)
+            sd.play(waveform.T, conf['data']['transform']['sample_rate'], blocking=True)
 
         print("Playing MFCC of original sound...")
         time.sleep(0.5)
@@ -193,7 +199,8 @@ def play_audio_files(conf, loader_test, model):
         sd.play(mfcc_to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length']),
                 conf['data']['transform']['sample_rate'], blocking=True)
 
-    scipy.io.wavfile.write('waveform.wav', conf['data']['transform']['sample_rate'], waveform.T)
+    if waveform is not None:
+        scipy.io.wavfile.write('waveform.wav', conf['data']['transform']['sample_rate'], waveform.T)
     scipy.io.wavfile.write('MFCC.wav', conf['data']['transform']['sample_rate'],
                            mfcc_to_audio(original.T, hop_length=conf['data']['transform']['hop_length']))
     scipy.io.wavfile.write('MFCC_masked.wav', conf['data']['transform']['sample_rate'],
@@ -210,11 +217,11 @@ def evaluate(conf):
 
     conf['env']['world_size'] = 1
     conf['env']['use_data_parallel'] = False
-    _, _, loader_test = get_loaders(conf, device=conf['device'], with_waveform=True)
+    _, _, loader_test = get_loaders(conf, device=conf['device'], with_waveform=False)
     loader_test.collate_fn = collate_fn_debug
     model = get_model(conf, conf['device'])
     metrics = get_metrics(conf, conf['device'])
 
-    # plot_one_predicted_batch(conf, loader_test, model)
+    plot_one_predicted_batch(conf, loader_test, model)
     play_audio_files(conf, loader_test, model)
-    # calc_metrics(conf, loader_test, model, metrics)
+    calc_metrics(conf, loader_test, model, metrics)

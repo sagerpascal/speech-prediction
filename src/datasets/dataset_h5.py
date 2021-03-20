@@ -96,7 +96,6 @@ class AudioDatasetH5(Dataset):
 
         speaker = self.metadata_df['Speaker'][index_dataframe]
         mfcc = self.h5_file['MFCC'][:, :, mfcc_start:mfcc_end]
-
         mfcc = zero_norm(mfcc, self.mean, self.std)
 
         # mfcc_start, mfcc_end = self.h5_file['META'][item]
@@ -123,7 +122,7 @@ def get_some_data():
 
     conf = get_config()
     dataset = AudioDatasetH5(conf, 'train', with_waveform=True)
-    mean, std = conf['data']['stats']['train']['std'], conf['data']['stats']['train']['mean']
+    mean, std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
 
     for i in range(3):
         idx = random.randint(0, len(dataset))

@@ -46,6 +46,6 @@ def get_config():
     conf['train']['batch_size'] = int(args.batch_size)
     conf['env']['use_data_parallel'] = 'cuda' in device and conf_file['env']['world_size'] > 1
     conf['masking']['window_shift'] = conf['masking']['n_frames'] + conf['masking']['k_frames'] if \
-        conf['masking']['window_shift'] is None else conf['masking']['window_shift']
+        conf['masking']['window_shift'] == 'None' else conf['masking']['window_shift']
 
     return conf

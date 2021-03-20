@@ -14,6 +14,11 @@ paths:
       val: timit_metadata_valid.csv
       test: timit_metadata_test.csv
 
+stats:
+  train:
+    mean: -14.926456
+    std: 70.814964
+
 transform:
   sample_rate: 16000
   n_mfcc: 40

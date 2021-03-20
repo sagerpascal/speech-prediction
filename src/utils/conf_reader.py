@@ -3,8 +3,9 @@ import argparse
 import torch
 from pathlib import Path
 
+
 def _read_conf_file(name):
-    base_paths = [Path('configs'), Path('../configs'),  Path('src') / 'configs']
+    base_paths = [Path('configs'), Path('../configs'), Path('src') / 'configs']
 
     for p in base_paths:
         try:
@@ -24,17 +25,27 @@ def get_config():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--learning_rate", default=0.05, help="The learning rate")
-    parser.add_argument("--load_model", default=None, help="path to the model to load")
+    parser.add_argument("--learning_rate", default=0.0005, help="The learning rate")
+    parser.add_argument("--weight_decay", default=0.0001, help="Weight decay of the optimizer")
+    parser.add_argument("--load_weights", default=None, help="name of the model to load")
+    parser.add_argument("--batch_size", default=64, help="The mini-batch size")
+    parser.add_argument("--step_size", default=10, help="LR scheduler step size")
+    parser.add_argument("--gamma", default=0.8, help="LR scheduler gamma")
     args = parser.parse_args()
 
     args_dict = {
-        'load_model': str(args.load_model),
+        'load_weights': str(args.load_weights),
         'device': device,
     }
 
     conf = {**conf_file, **args_dict}
     conf['optimizer']['lr'] = float(args.learning_rate)
+    conf['optimizer']['weight_decay'] = float(args.weight_decay)
+    conf['lr_scheduler']['step_size'] = int(args.step_size)
+    conf['lr_scheduler']['gamma'] = float(args.gamma)
+    conf['train']['batch_size'] = int(args.batch_size)
     conf['env']['use_data_parallel'] = 'cuda' in device and conf_file['env']['world_size'] > 1
+    conf['masking']['window_shift'] = conf['masking']['n_frames'] + conf['masking']['k_frames'] if \
+        conf['masking']['window_shift'] is None else conf['masking']['window_shift']
 
     return conf

@@ -23,7 +23,6 @@ def init():
 
 def main(k_frames=None):
     logger = logging.getLogger(__name__)
-
     conf = get_config()
     logger.info(conf)
 

@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 
 def pad_mfcc(batch):
-    batch = [item.squeeze().permute(1, 0) for item in batch]
+    batch = [item.squeeze(dim=0).permute(1, 0) for item in batch]
     batch = torch.nn.utils.rnn.pad_sequence(batch, batch_first=False, padding_value=0.)
     return batch
 

@@ -8,9 +8,8 @@ nav_order: 1
 
 As described in the [problem definition]({{ site.baseurl }}{% link index.md %}), the audio file is converted to a sequence
 of MFCC frames. To do so, the audio files are first loaded by the dataloader. Then, the function `torchaudio.transforms.MFCC`
-is used to calculate the MFCC frames. This function first calculates the MelSpectrogram (composition of Spectrogram and
-MelScale) and then creates the Mel-frequency cepstrum coefficients. For the calculation, the following default 
-parameters are suggested Based on ([7], [8]):
+first calculates the Mel-Spectrogram (composition of Spectrogram and MelScale) and then creates the Mel-frequency cepstrum coefficients (MFCC).
+For the calculation, the following default  parameters are suggested based on ([7], [8]):
 
 - `sample_rate` (Sample rate of audio signal): ``16000`` (or ``8000``)
 - `n_mfcc` (Number of mfcc coefficients to retain):  ``40`` (or ``20``)
@@ -28,27 +27,45 @@ $$
 \text{FPS} = \text{sr} / \frac{\text{fft size}}{2} = 16000 / \frac{400}{2} = 80
 $$
 
-frames per second. The goal is then to predict the $$k$$ frames based on $$n$$ given frames. Various experiments 
-could be conducted:
-- $$n$$ frames are given, calculate the $$k$$ subsequent frames
-- $$n$$ frames are given, calculate the $$k$$ previous frames
-- $$n/2$$ previous frames and $$n/2$$ subsequent frames are given, calculate the $$k$$ between them
-- for all experiments: 
-  - start with a large $$n$$ and decrease it,
-  - and/or start with a small $$k$$ and increase it
-  - with/without random positions of the masked frames per batch
+frames per second. The goal is then to predict $$k$$ frames based on $$n$$ given frames. The $$n$$ given frames and the $$k$$ frames to be predicted can be composed in different ways:
+- Mode `end`: $$n$$ frames are given, calculate the $$k$$ subsequent frames
+- Mode `beginning`: $$n$$ frames are given, calculate the $$k$$ previous frames
+- Mode `center`: $$n/2$$ previous frames and $$n/2$$ subsequent frames are given, calculate the $$k$$ frames between them
+
+<p align="center">
+   <img src="assets/concept/modes.png" alt="Different modes" width="70%" />
+   <br>
+   <i>The three different modes: Either the end, the beginning or the middle part of a segment must be predicted.</i>
+</p>
+
+The $$n$$ and $$k$$ frames form a segment together. This segment can be extracted from the audio file in several ways.
+For example, a segment can be extracted from an audio file at a random or concrete position. However, in the experiments 
+described below, a sliding-window approach was used. This is not to be confused with the sliding window used to calculate the 
+Mel-Spectrograms. This sliding window is used when several segments are extracted from an audio file. After one segment was 
+extracted, the sliding window is moved forward in time by $$s$$ frames to extract the next segment. In order that the data to predict
+is never used as input, the sliding window must be shifted at least by $$n + k$$. Thus, the follwing constraint applies:
+
+$$
+s \geq n + k
+$$
+
+<p align="center">
+   <img src="assets/concept/segment_shift.png" alt="Segment Shifting" width="70%" />
+   <br>
+   <i>A segment consists of the n given frames and the k frames to predict. A sliding-window with the window legnth s is used to extract the segments.</i>
+</p>
+
 
    
 For the network, the $$n$$ given frames are the input data `x`, and the $$k$$ frames to be predicted are the label `y`.
-For a first baseline, a simple Transfomer network is used. Alternatives could be different RNNs, such as LSTM or 
-CNNs with downsampling and upsampling such as a U-Net. Currently, no literature exists comparing MFCC frame 
+For a first baseline, a simple Transfomer network is trained. Alternatives could be different RNNs, such as LSTM or 
+CNNs with downsampling and upsampling layers such as a U-Net. Currently, no literature exists comparing MFCC frame 
 prediction using different architectures. However, the decision for using a Transformer network is argued as follows:
 - Transformer achieved in 13/15 ASR benchmarks a better performance than RNN [1]
 - Transformer are Turing-complete and can therefore model almost any sequence models [2]
 - Transformer have lower training-cost than RNN due to their self-attention [3]
 - Transformer can model longer dependencies than CNN without loosing resolution
 - Transformer can easily be combined with encoder and decoder architectures (e.g. combine it with CNN) [3]
-
 
 Suitable values must be found for the hyperparameters $$n$$ and $$k$$. At the beginning, it is recommended to start with a 
 simple task. This means that $$n$$ should be large and $$k$$ small. After that, one of the two parameters should be fixed 
@@ -60,7 +77,7 @@ prediction in search engines. Since audio data is much higher dimensional than t
 a lot of data.
 
 The average speaker says 120-200 words per minute [5]. Aussumed that 5 words must be given and an average speaker says 
-160 words per minute
+160 words per minute, this corresponds to
 
 $$
 n = 5/160 = 0.03 \text{min.} = 1.875 \text{sec.} \approx 150 \text{frames}
@@ -102,25 +119,28 @@ Therefore, the initial parameters are defined as follows:
 Then $$k$$ is continously increased until it has the size $$k = 0.375 \text{sec.} = 30 \text{frames} $$ (= predict one word).
 If this still works, $$k$$ can be increased to two words, meaning $$k = 0.75 \text{sec.} = 60 \text{frames} $$
 
-## Proposed Experiments
+## Training Method
+The network is trained in a similar way as n-gram models are trained for NLP. First, the audio file is read and converted
+to a MFCC. Then the frames $$f=0$$ to $$f=n+k$$ are extracted from the MFCC. Depending on the selected mode, either the first
+$$k$$ frames, the $$k$$ frames in the middle or the $$k$$ frames at the end are used as label `y` to predict. The remaining $$n$$
+frames are fed into the network as given data `x`. For the next example, a sliding window is shifted forward in time by $$s$$ frames.
+This forward shifting in time is done until $$n+k$$ frames does not fit in the remaining MFCC anymore. Afterwards, the next audiofile is read.
+By using this sliding-window approach not only more data can be extracted from a single audiofile, but the networks also can learn the whole sequence.
 
-| Setup                        | Dataset (see below) | $$n_{beginning}$$ |  $$n_{end}$$ | $$k_{beginning}$$ |  $$k_{end}$$ | Use random pos. of masked frames |
-|------------------------------|---------------------|-------------------|--------------|-------------------|--------------|----------------------------------|
-| Mask frames at the end       | TIMIT               | 150               | 150          | 1                 | 60           | No                               |
-| Mask frames at the end       | TIMIT               | 150               | 150          | 1                 | 60           | Yes                              |
-| Mask frames at the end       | Vox2                | 150               | 150          | 1                 | 60           | No                               |
-| Mask frames at the end       | Vox2                | 150               | 150          | 1                 | 60           | Yes                              |
-| Mask frames at the beginning | TIMIT               | 150               | 150          | 1                 | 60           | No                               |
-| Mask frames at the beginning | TIMIT               | 150               | 150          | 1                 | 60           | Yes                              |
-| Mask frames at the beginning | Vox2                | 150               | 150          | 1                 | 60           | No                               |
-| Mask frames at the beginning | Vox2                | 150               | 150          | 1                 | 60           | Yes                              |
-| Mask frames in the middle    | TIMIT               | 150               | 150          | 1                 | 60           | No                               |
-| Mask frames in the middle    | TIMIT               | 150               | 150          | 1                 | 60           | Yes                              |
-| Mask frames in the middle    | Vox2                | 150               | 150          | 1                 | 60           | No                               |
-| Mask frames in the middle    | Vox2                | 150               | 150          | 1                 | 60           | Yes                              |
+Pseudo-Code for `mode == 'end'`
 
-For each setup and dataset, a seperate model is trained. This model is then fine-tuned for each specific experiment 
-with the corresponding parameters.
+```python
+for audiofile in audiofiles:
+   mfcc = to_mfcc(audiofile)
+   start_idx, end_idx = 0, n + k
+
+   while(end_idx <= mfcc_length):
+      data = mfcc[start_idx:start_idx + n]
+      target = mfcc[start_idx+n:end_idx]
+      network.train(data, target)
+      start_idx += s
+      end_idx = start_idx + n + k
+```
 
 [1] S. Karita et al., "A Comparative Study on Transformer vs RNN in Speech Applications," 2019 IEEE Automatic Speech Recognition and Understanding Workshop (ASRU)
 
@@ -254,7 +274,7 @@ The error tends to be slightly larger when more frames are masked (larger $$k$$)
 |-----|-----|
 | <img src="assets/concept/mae_std_ex2.png" /> | <img src="assets/concept/mse_std_ex2.png" /> | 
 
-
+<!--
 ### TIMIT Dataset
 This concept works not only for single words but also for longer sequences like the sentences from the TIMIT dataset:
 
@@ -287,6 +307,6 @@ Reconstructed MFCC (predicted by the network):
       <source src="assets/concept/MFCC_reconstructed_TIMIT.wav" type="audio/wav">
    </audio>
 </p>
-
+-->
 
 

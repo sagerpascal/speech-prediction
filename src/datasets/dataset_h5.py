@@ -8,6 +8,7 @@ import torchaudio
 import os
 import numpy as np
 from datasets.normalization import zero_norm, undo_zero_norm
+from utils.conf_reader import get_config
 
 
 class AudioDatasetH5(Dataset):
@@ -114,14 +115,13 @@ class AudioDatasetH5(Dataset):
     #     self.h5_file.close()
 
 
-def get_some_data():
+def play_some_data():
     import random
-    from utils.conf_reader import get_config
     import scipy.io.wavfile
     from librosa.feature.inverse import mfcc_to_audio
 
     conf = get_config()
-    dataset = AudioDatasetH5(conf, 'train', with_waveform=True)
+    dataset = AudioDatasetH5(conf, 'train', with_waveform=False)
     mean, std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
 
     for i in range(3):
@@ -152,6 +152,42 @@ def get_some_data():
                                    mfcc_to_audio(target, hop_length=conf['data']['transform']['hop_length']))
 
 
+def test_sliding_window():
+    conf = get_config()
+    conf['masking']['window_shift'] = 60
+    conf['masking']['n_frames'] = 30
+    conf['masking']['k_frames'] = 20
+    mean, std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
+
+    h5_fp = Path('/workspace/data_pa/') / conf['data']['paths']['h5']['train']
+    h5_file = h5pickle.File(str(h5_fp.resolve()), 'r', skip_cache=False)
+    mfcc_orig = h5_file['MFCC'][:, :, 0:170]
+
+    dataset = AudioDatasetH5(conf, 'train', with_waveform=False)
+
+    data_0, target_0, mfcc_0, *_ = dataset[0]
+    data_1, target_1, mfcc_1, *_ = dataset[1]
+
+    data_0, target_0, mfcc_0 = data_0.cpu().numpy(), target_0.cpu().numpy(), mfcc_0.cpu().numpy()
+    data_1, target_1, mfcc_1 = data_1.cpu().numpy(), target_1.cpu().numpy(), mfcc_1.cpu().numpy()
+
+    data_0 = undo_zero_norm(data_0, mean, std)
+    target_0 = undo_zero_norm(target_0, mean, std)
+    mfcc_0 = undo_zero_norm(mfcc_0, mean, std)
+    data_1 = undo_zero_norm(data_1, mean, std)
+    target_1 = undo_zero_norm(target_1, mean, std)
+    mfcc_1 = undo_zero_norm(mfcc_1, mean, std)
+
+    assert np.allclose(mfcc_orig[:, :, :conf['masking']['n_frames']], data_0, atol=0.0001)
+    assert np.allclose(mfcc_orig[:, :, conf['masking']['n_frames']:conf['masking']['n_frames']+conf['masking']['k_frames']], target_0, atol=0.0001)
+    assert np.allclose(mfcc_orig[:, :, :conf['masking']['n_frames']+conf['masking']['k_frames']], mfcc_0, atol=0.0001)
+
+    assert np.allclose(mfcc_orig[:, :, conf['masking']['window_shift']:conf['masking']['window_shift']+conf['masking']['n_frames']], data_1, atol=0.0001)
+    assert np.allclose(mfcc_orig[:, :, conf['masking']['window_shift']+conf['masking']['n_frames']:conf['masking']['window_shift']+conf['masking']['n_frames']+conf['masking']['k_frames']], target_1, atol=0.0001)
+    assert np.allclose(mfcc_orig[:, :, conf['masking']['window_shift']:conf['masking']['window_shift']+conf['masking']['n_frames']+conf['masking']['k_frames']], mfcc_1, atol=0.0001)
+
+
 if __name__ == '__main__':
     os.chdir('../')
-    get_some_data()
+    test_sliding_window()
+    play_some_data()

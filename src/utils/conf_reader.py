@@ -48,4 +48,6 @@ def get_config():
     conf['masking']['window_shift'] = conf['masking']['n_frames'] + conf['masking']['k_frames'] if \
         conf['masking']['window_shift'] == 'None' else conf['masking']['window_shift']
 
+    assert conf['masking']['window_shift'] >= conf['masking']['n_frames'] + conf['masking']['k_frames']
+
     return conf

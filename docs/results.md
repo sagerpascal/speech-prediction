@@ -30,7 +30,7 @@ This means that $$n + k$$ frames together consists of approx. 5 words.
 [1] Dumbali and Nagaraja, "Real Time Word Prediction Using N-Grams Model", 2019, International Journal of Innovative Technology and Exploring Engineering (IJITEE)
 
 
-## Experiment 1: $$n=120$$, $$k=[1, 2, ..., 30]$$ and $$s=n+k$$
+### Experiment 1: $$n=120$$, $$k=[1, 2, ..., 30]$$ and $$s=n+k$$
 
 In this first experiment, $$n=120$$ frames were given and then the $$k$$ subsequent frames were predicted. Thereby $$k$$ 
 was increased linearly from $$k=1$$ to $$k=30$$. The window-shift $$s$$ was defined as $$s=k+n$$. As a result, the models with a smaller $$k$$ could use more data during training.
@@ -118,7 +118,7 @@ It would be interesting to conduct additional experiments to investigate how man
 and whether the relationship between $$k$$ and MSE is linear or not. However, when using $$n=120$$ and $$k=60$$, the problem arises that 
 $$n+k>150$$ and consequently only half as much data is available as with $$k=1$$. Therefore, further experiments with smaller $$n$$ were conducted and described below.
 
-## Experiment 2: $$n=90$$, $$k=[1, 2, 4, 6, ..., 60]$$ and $$s=n+k$$
+### Experiment 2: $$n=90$$, $$k=[1, 2, 4, 6, ..., 60]$$ and $$s=n+k$$
 <!--
 Is called exp6 in wandb!!!
 -->
@@ -133,7 +133,7 @@ that $$k$$ could be increased while still having sufficient data for training av
 
 > TODO
 
-## Experiment 3: $$n=60$$, $$k=[1, 3, 6, 9, ..., 90]$$ and $$s=n+k$$
+### Experiment 3: $$n=60$$, $$k=[1, 3, 6, 9, ..., 90]$$ and $$s=n+k$$
 <!--
 Is called exp7 in wandb!!!
 -->
@@ -147,7 +147,7 @@ more so that $$k$$ could be increased again.
 
 > TODO
 
-## Experiment 4: $$n=90$$, $$k=[1, 2, 4, 6, ..., 60]$$ and $$s=150$$
+### Experiment 4: $$n=90$$, $$k=[1, 2, 4, 6, ..., 60]$$ and $$s=150$$
 <!--
 Is called exp3 in wandb!!!
 -->
@@ -170,7 +170,7 @@ Otherwise the setup remains the same, $$n$$ frames are given again and the subse
 
 > TODO write conclusion
 
-## Experiment 5: $$n=60$$, $$k=[1, 3, 6, 9, ..., 90]$$ and $$s=150$$
+### Experiment 5: $$n=60$$, $$k=[1, 3, 6, 9, ..., 90]$$ and $$s=150$$
 <!--
 Is called exp8 in wandb!!!
 -->

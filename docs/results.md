@@ -60,6 +60,7 @@ Although there are some outliers, there could to be a linear relationship betwee
     <br>
     <br>
     <img src="assets/results/exp1/MSE_k2.svg" alt="MSE per Epoch with different k" width="70%" />
+    <br>
     <i>A different plot which indicates a linear relationship by showing the dependency between MSE and the number of masked frames k</i>
 </p>
 

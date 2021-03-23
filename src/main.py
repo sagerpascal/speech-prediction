@@ -21,13 +21,19 @@ def init():
         torchaudio.set_audio_backend("sox_io")
 
 
-def main(k_frames=None):
+def main(n_frames=None, k_frames=None, window_shift=None):
     logger = logging.getLogger(__name__)
     conf = get_config()
     logger.info(conf)
 
+    if n_frames is not None:
+        conf['masking']['n_frames'] = n_frames
+
     if k_frames is not None:
         conf['masking']['k_frames'] = k_frames
+
+    if window_shift is not None:
+        conf['masking']['window_shift'] = window_shift
 
     if conf['mode'] == "train":
 

@@ -131,7 +131,14 @@ that $$k$$ could be increased while still having sufficient data for training av
 | End (TIMT) | $$90$$   | $$1, 2, 4, 6, ..., 60$$ | $$n+k$$     |  |
 
 
-> TODO
+<p align="center">
+    <br>
+    <img src="assets/results/exp2/MSE_k1.svg" alt="MSE per Epoch with different k" width="70%" />
+    <br>
+    <i>Mean Square Error for different models using a different number of masked frames k</i>
+</p>
+
+> TODO: Colcusion
 
 ### Experiment 3: $$n=60$$, $$k=[1, 3, 6, 9, ..., 90]$$ and $$s=n+k$$
 <!--
@@ -145,7 +152,14 @@ more so that $$k$$ could be increased again.
 |------|----------------|----------------|--------------------|--------------|
 | End (TIMT) | $$60$$   | $$1, 3, 6, 9, ..., 90$$ | $$n+k$$     |  |
 
-> TODO
+<p align="center">
+    <br>
+    <img src="assets/results/exp3/MSE_k1.svg" alt="MSE per Epoch with different k" width="70%" />
+    <br>
+    <i>Mean Square Error for different models using a different number of masked frames k</i>
+</p>
+
+> TODO Conclusion
 
 ### Experiment 4: $$n=90$$, $$k=[1, 2, 4, 6, ..., 60]$$ and $$s=150$$
 <!--
@@ -163,6 +177,7 @@ Otherwise the setup remains the same, $$n$$ frames are given again and the subse
 | End (TIMT) | $$90$$   | $$1, 2, 4, 6, ..., 60$$ | $$150$$     | 4516 |
 
 <p align="center">
+    <br>
     <img src="assets/results/exp4/MSE_k1.svg" alt="MSE per Epoch with different k" width="70%" />
     <br>
     <i>Mean Square Error for different models using a different number of masked frames k</i>
@@ -181,7 +196,14 @@ Compared to the previous experiment, $$n$$ was reduced so that $$k_{max}$$ could
 |------|----------------|----------------|--------------------|--------------|
 | End (TIMT) | $$60$$   | $$1, 3, 6, 9, ..., 90$$ | $$150$$     | 4516 |
 
-> TODO
+<p align="center">
+    <br>
+    <img src="assets/results/exp5/MSE_k1.svg" alt="MSE per Epoch with different k" width="70%" />
+    <br>
+    <i>Mean Square Error for different models using a different number of masked frames k</i>
+</p>
+
+> TODO Conclusion
 
 
 

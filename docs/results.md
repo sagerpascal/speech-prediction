@@ -37,7 +37,7 @@ was increased linearly from $$k=1$$ to $$k=30$$. The window-shift $$s$$ was defi
 
 | Mode | $$n_{frames}$$ | $$k_{frames}$$ | window shift $$s$$ | Dataset size |
 |------|----------------|----------------|--------------------|--------------|
-| End (TIMT) | $$120$$        | $$1,2,3, ..., 30$$ | $$n+k$$        | 4516($$n=30$$) to 6001 ($$n=1$$) |
+| End (TIMT) | $$120$$        | $$1,2,3, ..., 30$$ | $$n+k$$        | 4516($$k=30$$) to 6001 ($$k=1$$) |
 
 
 The 30 models were trained separately, because specific frames could be used in one model as given data `x` and in another model as data to be predicted `y`.
@@ -128,7 +128,7 @@ that $$k$$ could be increased while still having sufficient data for training av
 
 | Mode | $$n_{frames}$$ | $$k_{frames}$$ | window shift $$s$$ | Dataset size |
 |------|----------------|----------------|--------------------|--------------|
-| End (TIMT) | $$90$$   | $$1, 2, 4, 6, ..., 60$$ | $$n+k$$     |  |
+| End (TIMT) | $$90$$   | $$1, 2, 4, 6, ..., 60$$ | $$n+k$$     | 4516($$k=60$$) to 8724 ($$k=1$$) |
 
 
 <p align="center">
@@ -138,7 +138,9 @@ that $$k$$ could be increased while still having sufficient data for training av
     <i>Mean Square Error for different models using a different number of masked frames k</i>
 </p>
 
-> TODO: Colcusion
+Even if fewer frames are given (i.e. $$n=90$$), very good results are still achieved. The loss is for all models still 
+relatively small. In addition, the plot indicates a possible linear relationship between the number of masked frames 
+$$k$$ and the MSE of the models.
 
 ### Experiment 3: $$n=60$$, $$k=[1, 3, 6, 9, ..., 90]$$ and $$s=n+k$$
 <!--
@@ -150,7 +152,7 @@ more so that $$k$$ could be increased again.
 
 | Mode | $$n_{frames}$$ | $$k_{frames}$$ | window shift $$s$$ | Dataset size |
 |------|----------------|----------------|--------------------|--------------|
-| End (TIMT) | $$60$$   | $$1, 3, 6, 9, ..., 90$$ | $$n+k$$     |  |
+| End (TIMT) | $$60$$   | $$1, 3, 6, 9, ..., 90$$ | $$n+k$$     | 4516 ($$k=90$$) to 13936 ($$k=1$$) |
 
 <p align="center">
     <br>
@@ -159,9 +161,35 @@ more so that $$k$$ could be increased again.
     <i>Mean Square Error for different models using a different number of masked frames k</i>
 </p>
 
-> TODO Conclusion
+In this experiment, compared to the previous one, the number of given frames $$n$$ was further reduced and the number 
+of frames to be predicted was increased up to $$k=90$$. Surprisingly, the performance is still very good. The plot also 
+questions the linear relationship between the number of masked frames and the MSE. Many models with a $$k>60$$ have 
+achieved very good results.
 
-### Experiment 4: $$n=90$$, $$k=[1, 2, 4, 6, ..., 60]$$ and $$s=150$$
+### Experiment 4: $$n=10$$, $$k=[1, 5, 10, 15, ..., 140]$$ and $$s=n+k$$
+<!--
+Is called exp9 in wandb!!!
+-->
+This experiment was created to test the extreme case. Only very few frames were given, i.e. $$n=10$$, which 
+corresponds to one third of a word. At the same time, a very large number of words had to be predicted, $$k_{max}=150$$ 
+corresponds to about five words.
+
+| Mode | $$n_{frames}$$ | $$k_{frames}$$ | window shift $$s$$ | Dataset size |
+|------|----------------|----------------|--------------------|--------------|
+| End (TIMT) | $$10$$   | $$1, 5, 10, 15, ..., 140$$ | $$n+k$$     | 4516 ($$k=140$$) to 86122 ($$k=1$$) |
+
+<p align="center">
+    <br>
+    <img src="assets/results/exp4/MSE_k1.svg" alt="MSE per Epoch with different k" width="70%" />
+    <br>
+    <i>Mean Square Error for different models using a different number of masked frames k</i>
+</p>
+
+This experiment shows that the Transformer network is probably capable of learning the sentences of TIMIT completely.
+Moreover, the results are very good. There is no longer a linear relationship between the number of masked frames and 
+the MSE. This confirms the thesis that the complete sentences and not only individual phonemes can be learned.
+
+### Experiment 5: $$n=90$$, $$k=[1, 2, 4, 6, ..., 60]$$ and $$s=150$$
 <!--
 Is called exp3 in wandb!!!
 -->
@@ -178,14 +206,16 @@ Otherwise the setup remains the same, $$n$$ frames are given again and the subse
 
 <p align="center">
     <br>
-    <img src="assets/results/exp4/MSE_k1.svg" alt="MSE per Epoch with different k" width="70%" />
+    <img src="assets/results/exp5/MSE_k1.svg" alt="MSE per Epoch with different k" width="70%" />
     <br>
     <i>Mean Square Error for different models using a different number of masked frames k</i>
 </p>
 
-> TODO write conclusion
+The fixed frame shift $$s$$ did not change the results much. This approach is probably not the best way to train a 
+good model. However, it does make the comparison between the models more consistent, as all models have the same 
+amount of training data and the same frames have to be predicted.
 
-### Experiment 5: $$n=60$$, $$k=[1, 3, 6, 9, ..., 90]$$ and $$s=150$$
+### Experiment 6: $$n=60$$, $$k=[1, 3, 6, 9, ..., 90]$$ and $$s=150$$
 <!--
 Is called exp8 in wandb!!!
 -->
@@ -198,12 +228,48 @@ Compared to the previous experiment, $$n$$ was reduced so that $$k_{max}$$ could
 
 <p align="center">
     <br>
-    <img src="assets/results/exp5/MSE_k1.svg" alt="MSE per Epoch with different k" width="70%" />
+    <img src="assets/results/exp6/MSE_k1.svg" alt="MSE per Epoch with different k" width="70%" />
     <br>
     <i>Mean Square Error for different models using a different number of masked frames k</i>
 </p>
 
-> TODO Conclusion
+
+In this case with fixed $$s$$, the models with small $$k$$ tended to get worse. However, this should be taken with 
+caution. Only one run was done per model. It is very likely, that with more runs a better model could be trained. To 
+get statistically more meaningful results, multiple runs should be executed and then the MSE should be averaged.
+However, this experiments were more about to find a limit for the parameter $$k$$.
+
+
+### Experiment 7: $$n=10$$, $$k=[1, 5, 10, 15, ..., 140]$$ and $$s=150$$
+<!--
+Is called exp10 in wandb!!!
+-->
+This experiment is another test of the extreme case. Only a very small number of frames were given (i.e. $$n=10$$), 
+while a verly larger number of frames had to be predicted (i.e. $$k_{max}=140$$).
+In this experiment, the windows-shift was again defined as $$s=150$$ so that all models have the same amount of data.
+Compared to the previous experiment, $$n$$ was reduced so that $$k_{max}$$ could be increased.
+
+| Mode | $$n_{frames}$$ | $$k_{frames}$$ | window shift $$s$$ | Dataset size |
+|------|----------------|----------------|--------------------|--------------|
+| End (TIMT) | $$10$$   | $$1, 5, 10, 15, ..., 140$$ | $$150$$     | 4516 |
+
+<p align="center">
+    <br>
+    <img src="assets/results/exp7/MSE_k1.svg" alt="MSE per Epoch with different k" width="70%" />
+    <br>
+    <i>Mean Square Error for different models using a different number of masked frames k</i>
+</p>
+
+The results are still very good in this experiment. The loss is small for all models. To show how good the results are, 
+some results are made audible below.
+
+
+| Original MFCC | Masked MFCC (Input) | Reconstructed MFCC (Prediction) |
+|---------------|---------------------|---------------------------------|
+| <audio controls><source src="assets/results/exp7/MFCC_1.wav" type="audio/wav"></audio> | <audio controls><source src="assets/results/exp7/MFCC_masked_1.wav" type="audio/wav"></audio> | <audio controls><source src="assets/results/exp7/MFCC_reconstructed_1.wav" type="audio/wav"></audio> |
+| <audio controls><source src="assets/results/exp7/MFCC_2.wav" type="audio/wav"></audio> | <audio controls><source src="assets/results/exp7/MFCC_masked_2.wav" type="audio/wav"></audio> | <audio controls><source src="assets/results/exp7/MFCC_reconstructed_2.wav" type="audio/wav"></audio> |
+| <audio controls><source src="assets/results/exp7/MFCC_3.wav" type="audio/wav"></audio> | <audio controls><source src="assets/results/exp7/MFCC_masked_3.wav" type="audio/wav"></audio> | <audio controls><source src="assets/results/exp7/MFCC_reconstructed_3.wav" type="audio/wav"></audio> |
+| <audio controls><source src="assets/results/exp7/MFCC_4.wav" type="audio/wav"></audio> | <audio controls><source src="assets/results/exp7/MFCC_masked_4.wav" type="audio/wav"></audio> | <audio controls><source src="assets/results/exp7/MFCC_reconstructed_4.wav" type="audio/wav"></audio> |
 
 
 

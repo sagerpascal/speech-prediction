@@ -242,7 +242,8 @@ In this section, the concept is explained using the Speech-Command Dataset.
    </p>
    
 ### Predict Different Number of Frames
-At the end of an MFCC, $$k$$ frames were omitted. Then, a transformer network was trained to predict the missing $$k$$ frames.
+At the end of an MFCC, $$k$$ frames are masked. Then, a transformer network is trained to predict the missing $$k$$ 
+frames.
 
 Different Input-Data:
 
@@ -257,56 +258,4 @@ Different Input-Data:
 | $$k=50$$ | $$k=60$$ | $$k=70$$ |
 |----------|----------|----------|
 | <img src="assets/concept/input_50f_masked.png" /> | <img src="assets/concept/input_60f_masked.png" /> | <img src="assets/concept/input_70f_masked.png"/> |
-
-
-The error tends to be slightly larger when more frames are masked (larger $$k$$). However, this is not true in all cases and the difference is relatively small.
-
-###### Error per Epoch for Runs with different k
-
-| MAE | MSE |
-|-----|-----|
-| <img src="assets/concept/mae_ex2.png" /> | <img src="assets/concept/mse_ex2.png" /> | 
-
-
-###### Standard Deviation per Epoch for Runs with different k
-
-| MAE | MSE |
-|-----|-----|
-| <img src="assets/concept/mae_std_ex2.png" /> | <img src="assets/concept/mse_std_ex2.png" /> | 
-
-<!--
-### TIMIT Dataset
-This concept works not only for single words but also for longer sequences like the sentences from the TIMIT dataset:
-
-<img src="assets/concept/result_timit.png" alt="MPrediction on the TIMIT dataset" />
-
-Original audio signal:
-<p align="center">
-   <audio controls>
-      <source src="assets/concept/waveform_TIMIT.wav" type="audio/wav">
-   </audio>
-</p>
-
-Converted to an MFCC:
-<p align="center">
-   <audio controls>
-      <source src="assets/concept/MFCC_TIMIT.wav" type="audio/wav">
-   </audio>
-</p>
-
-Masked MFCC (fed into the network):
-<p align="center">
-   <audio controls>
-      <source src="assets/concept/MFCC_masked_TIMIT.wav" type="audio/wav">
-   </audio>
-</p>
-
-Reconstructed MFCC (predicted by the network):
-<p align="center">
-   <audio controls>
-      <source src="assets/concept/MFCC_reconstructed_TIMIT.wav" type="audio/wav">
-   </audio>
-</p>
--->
-
 

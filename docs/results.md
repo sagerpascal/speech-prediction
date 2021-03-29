@@ -11,12 +11,12 @@ nav_order: 4
 ### Parameters $$n$$ & $$k$$
 The choice of the parameters $$n$$ and $$k$$ is very important. As Ref. [1] described, larger $$n$$ often lead to better results. 
 However, the TIMIT data set contains rather short audio sequences ($$\approx 3s $$) and therefore the parameter $$nn$$ cannot be arbitrarily large. 
-Figure 1 shows the different MFCC lengths:
+Figure 1 shows the different number of MFCC frames per audio file:
 
 <p align="center">
       <img src="assets/results/timit-mfcc-lengths.png" alt="MFCC Lengths" width="70%" />
       <br>
-      <i> Figure 1: MFCC frame lengths</i>
+      <i> Figure 1: Number of MFCC frames per file</i>
 </p>
 
 In order to have enough data for training, $$n + k$$ should not be longer than $$\approx 150$$ frames.
@@ -28,6 +28,9 @@ This means that $$n + k$$ frames together consists of approx. 5 words.
 
 
 [1] Dumbali and Nagaraja, "Real Time Word Prediction Using N-Grams Model", 2019, International Journal of Innovative Technology and Exploring Engineering (IJITEE)
+
+### Simple Baseline
+
 
 
 ### Experiment 1: $$n=120$$, $$k=[1, 2, ..., 30]$$ and $$s=n+k$$

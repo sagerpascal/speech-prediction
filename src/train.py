@@ -134,14 +134,15 @@ class ValidEpoch(Epoch):
         with torch.no_grad():
             # https://datascience.stackexchange.com/questions/81727/what-would-be-the-target-input-for-transformer-decoder-during-test-phase
             # TODO with custom transformer model: output, encoder_log_probs, input_lengths  = self.model.forward(x, input_lengths, y)
-            output = self.model.forward(x, y)
+            # output = self.model.forward(x, y)
+            output = self.model.module.predict(x)
             loss = torch.nn.functional.mse_loss(output, y)
         return loss, output
 
 
 def setup_wandb(conf):
-    run = wandb.init(project="tsc-{}".format(conf['data']['dataset']), job_type='train')
-    # wandb.run.name = 'n={} k={}'.format(conf['masking']['n_frames'], conf['masking']['k_frames'])
+    run = wandb.init(project="exp21-{}".format(conf['data']['dataset']), job_type='train')
+    wandb.run.name = 'n={} k={} s={}'.format(conf['masking']['n_frames'], conf['masking']['k_frames'], conf['masking']['window_shift'])
     wandb.run.save()
     return run
 
@@ -288,7 +289,7 @@ def train(rank=None, world_size=None, conf=None):
             if valid_logs['loss'] < best_loss:
                 best_loss = valid_logs['loss']
                 model_name = wandb.run.name if conf['use_wandb'] else 'tsc_acf'
-                model_name = "{}.pth".format(model_name)
+                model_name = "exp21-{}.pth".format(model_name)
                 model_path = '/workspace/data_pa/trained_models'
 
                 save_model(model, model_path, model_name, save_wandb=conf['use_wandb'])
@@ -315,10 +316,10 @@ def train(rank=None, world_size=None, conf=None):
                 filename = store.get("model_filename").decode("utf-8")
                 model.load_state_dict(torch.load(filename, map_location=map_location))
 
-        if i % 50 == 0 and is_main_process:
-            model_name = "{}_backup.pth".format(wandb.run.name) if conf['use_wandb'] else 'model_backup.pth'
-            save_model(model, '/workspace/data_pa/trained_models', model_name, save_wandb=False)
-            logger.info("Model saved as backup after {} epochs".format(i))
+        # if i % 50 == 0 and is_main_process:
+        #     model_name = "{}_backup.pth".format(wandb.run.name) if conf['use_wandb'] else 'model_backup.pth'
+        #     save_model(model, '/workspace/data_pa/trained_models', model_name, save_wandb=False)
+        #     logger.info("Model saved as backup after {} epochs".format(i))
 
         if conf['lr_scheduler']['activate']:
             lr_scheduler.step()

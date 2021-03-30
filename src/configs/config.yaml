@@ -17,6 +17,15 @@ masking:
 data:
   config_file: datasets/timit-original.yaml
 
+# Model settings
+model:
+  type: transformer # either unet or transformer
+  transformer:
+    n_heads: 8
+    n_encoder_layers: 6
+    n_decoder_layers: 6
+
+
 # Training settings
 train:
   max_number_of_epochs: 100

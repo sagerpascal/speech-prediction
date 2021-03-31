@@ -118,12 +118,12 @@ def create_df_vox2():
     print("Total {}/{}".format(len(df_train) + len(df_val) + len(df_test), 2256492 / 2))
 
 
-def add_to_file(conf, i, mfcc_start, mfcc, speaker, filename, mfcc_d, speaker_d, filepath_d, meta_d, vox2=True):
+def add_to_file(i, mfcc_start, mfcc, speaker, filename, mfcc_d, speaker_d, filepath_d, meta_d, n_features, vox2=True):
     mfcc_end = mfcc_start + mfcc.shape[2]
-    mfcc_d.resize((1, conf['data']['transform']['n_mfcc'], mfcc_end))
+    mfcc_d.resize((1, n_features, mfcc_end))
     mfcc_d[:, :, mfcc_start:mfcc_end] = mfcc
-    speaker_d[i, :] = speaker
-    filepath_d[i, :] = speaker + "/" + filename if vox2 else filename
+    speaker_d[i, :] = speaker.encode("ascii")
+    filepath_d[i, :] = (speaker + "/" + filename).encode("ascii") if vox2 else filename.encode("ascii")
     meta_d[i, :] = np.array([mfcc_start, mfcc_end])
     return mfcc_end
 
@@ -155,9 +155,9 @@ def _create_h5_file_timit(conf, df_fp, h5_name, df_name):
         mfcc_lengths.append(mfcc.shape[2])
         speakers.append(speaker)
 
-        mfcc_end = add_to_file(conf, index, mfcc_start, mfcc.cpu(), speaker, filename,
+        mfcc_end = add_to_file(index, mfcc_start, mfcc.cpu(), speaker, filename,
                                       mfcc_dataset, speaker_dataset, filepath_dataset,
-                                      meta_dataset, vox2=False)
+                                      meta_dataset, n_features=conf['data']['transform']['n_mfcc'], vox2=False)
 
         mfcc_ends.append(mfcc_end)
         mfcc_start = mfcc_end
@@ -233,32 +233,32 @@ def create_h5_file_vox2():
             fp = speaker + "/" + filename.split('.m4a')[0]
 
             if fp in test_files:
-                mfcc_start_test = add_to_file(conf, i_test, mfcc_start_test, mfcc, speaker, filename,
+                mfcc_start_test = add_to_file(i_test, mfcc_start_test, mfcc, speaker, filename,
                                               mfcc_datasets[2], speaker_datasets[2], filepath_datasets[2],
-                                              meta_datasets[2])
+                                              meta_datasets[2], n_features=conf['data']['transform']['n_mfcc'])
                 i_test += 1
             elif fp in valid_files:
-                mfcc_start_valid = add_to_file(conf, i_valid, mfcc_start_valid, mfcc, speaker, filename,
+                mfcc_start_valid = add_to_file(i_valid, mfcc_start_valid, mfcc, speaker, filename,
                                                mfcc_datasets[1], speaker_datasets[1], filepath_datasets[1],
-                                               meta_datasets[1])
+                                               meta_datasets[1], n_features=conf['data']['transform']['n_mfcc'])
                 i_valid += 1
             elif fp in train_files:
-                mfcc_start_train = add_to_file(conf, i_train, mfcc_start_train, mfcc, speaker, filename,
+                mfcc_start_train = add_to_file(i_train, mfcc_start_train, mfcc, speaker, filename,
                                                mfcc_datasets[0], speaker_datasets[0], filepath_datasets[0],
-                                               meta_datasets[0])
+                                               meta_datasets[0], n_features=conf['data']['transform']['n_mfcc'])
                 i_train += 1
             else:
                 logger.debug("File {} not defined in df".format(fp))
 
                 if speaker in test_speakers:
-                    mfcc_start_test = add_to_file(conf, i_test, mfcc_start_test, mfcc, speaker, filename,
+                    mfcc_start_test = add_to_file(i_test, mfcc_start_test, mfcc, speaker, filename,
                                                   mfcc_datasets[2], speaker_datasets[2], filepath_datasets[2],
-                                                  meta_datasets[2])
+                                                  meta_datasets[2], n_features=conf['data']['transform']['n_mfcc'])
                     i_test += 1
                 else:
-                    mfcc_start_train = add_to_file(conf, i_train, mfcc_start_train, mfcc, speaker, filename,
+                    mfcc_start_train = add_to_file(i_train, mfcc_start_train, mfcc, speaker, filename,
                                                    mfcc_datasets[0], speaker_datasets[0], filepath_datasets[0],
-                                                   meta_datasets[0])
+                                                   meta_datasets[0], n_features=conf['data']['transform']['n_mfcc'])
                     i_train += 1
 
     f.close()

@@ -5,19 +5,34 @@ paths:
     train: timit-orig-train.csv
     val: timit-orig-val.csv
     test: timit-orig-test.csv
-  h5:
-    train: TIMIT/timit_mfcc_train.h5
-    val: TIMIT/timit_mfcc_valid.h5
-    test: TIMIT/timit_mfcc_test.h5
-    metadata:
-      train: timit_metadata_train.csv
-      val: timit_metadata_valid.csv
-      test: timit_metadata_test.csv
+  mfcc:
+    h5:
+      train: TIMIT/timit_mfcc_train.h5
+      val: TIMIT/timit_mfcc_valid.h5
+      test: TIMIT/timit_mfcc_test.h5
+      metadata:
+        train: timit_metadata_train.csv
+        val: timit_metadata_valid.csv
+        test: timit_metadata_test.csv
+  mel-spectro:
+    h5:
+      train: TIMIT/timit_mel-spectro_train.h5
+      val: TIMIT/timit_mel-spectro_valid.h5
+      test: TIMIT/timit_mel-spectro_test.h5
+      metadata:
+        train: timit_mel_spectro_metadata_train.csv
+        val: timit_mel_spectro_metadata_valid.csv
+        test: timit_mel_spectro_metadata_test.csv
 
 stats:
-  train:
-    mean: -14.926456
-    std: 70.814964
+  mfcc:
+    train:
+      mean: -14.926456
+      std: 70.814964
+  mel-spectro:
+    train:
+      mean: 0.08340319991111755
+      std: 1.078992486000061
 
 transform:
   sample_rate: 16000
@@ -27,3 +42,4 @@ transform:
   n_fft: 512
   f_min: 0
   f_max: 8000
+  n_mels: 128

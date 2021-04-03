@@ -23,3 +23,4 @@ transform:
   n_fft: 512
   f_min: 0
   f_max: 8000
+  n_mels: 128

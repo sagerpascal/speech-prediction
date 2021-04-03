@@ -16,7 +16,7 @@ def normalize(tensor):
 
 
 def collate_fn(batch):
-    data_b, target_b, waveform_b, mfcc_b = [], [], [], []
+    data_b, target_b = [], []
     for data, target, *_ in batch:
         data_b.append(data)
         target_b.append(target)

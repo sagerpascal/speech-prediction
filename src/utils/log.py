@@ -1,10 +1,10 @@
 import datetime
 import logging
 import sys
-
+from pathlib import Path
 
 def setup_logging():
-    logging.basicConfig(filename="logs/{}.log".format(datetime.datetime.now().strftime("%Y-%m-%d %H%M%S")),
+    logging.basicConfig(filename=Path('logs') / '{}.log'.format(datetime.datetime.now().strftime("%Y-%m-%d %H%M%S")),
                         filemode="w", level=logging.DEBUG)
 
     logger = logging.getLogger()  # the root logger

@@ -66,13 +66,12 @@ class CustomTransformer(nn.Transformer):
         self.x_pos_enc = PositionalEncoding(d_model)
         self.t_pos_enc = PositionalEncoding(d_model)
 
-        self.out = nn.Linear(d_model, self.conf['data']['transform']['n_mfcc'])
+        self.out = nn.Linear(d_model, d_model)
 
     def forward(self, x, y):
         target = torch.ones_like(y) * self.start_mask
         target[:, 0, :] = x[:, -1, :]
         target[:, 1:, :] = y[:, :-1, :]
-
         x = self.x_pos_enc(x)
         target = self.t_pos_enc(target)
         x2 = x.permute(1, 0, 2)

@@ -135,14 +135,14 @@ class ValidEpoch(Epoch):
             # https://datascience.stackexchange.com/questions/81727/what-would-be-the-target-input-for-transformer-decoder-during-test-phase
             # TODO with custom transformer model: output, encoder_log_probs, input_lengths  = self.model.forward(x, input_lengths, y)
             # output = self.model.forward(x, y)
-            output = self.model.module.predict(x)
+            output = self.model.predict(x)
             loss = torch.nn.functional.mse_loss(output, y)
         return loss, output
 
 
 def setup_wandb(conf):
-    run = wandb.init(project="exp21-{}".format(conf['data']['dataset']), job_type='train')
-    wandb.run.name = 'n={} k={} s={}'.format(conf['masking']['n_frames'], conf['masking']['k_frames'], conf['masking']['window_shift'])
+    run = wandb.init(project="{}-{}".format(conf['data']['dataset'], conf['data']['type']), job_type='train')
+    # wandb.run.name = 'n={} k={} s={}'.format(conf['masking']['n_frames'], conf['masking']['k_frames'], conf['masking']['window_shift'])
     wandb.run.save()
     return run
 
@@ -289,7 +289,7 @@ def train(rank=None, world_size=None, conf=None):
             if valid_logs['loss'] < best_loss:
                 best_loss = valid_logs['loss']
                 model_name = wandb.run.name if conf['use_wandb'] else 'tsc_acf'
-                model_name = "exp21-{}.pth".format(model_name)
+                model_name = "{}.pth".format(model_name)
                 model_path = '/workspace/data_pa/trained_models'
 
                 save_model(model, model_path, model_name, save_wandb=conf['use_wandb'])
@@ -321,8 +321,6 @@ def train(rank=None, world_size=None, conf=None):
         #     save_model(model, '/workspace/data_pa/trained_models', model_name, save_wandb=False)
         #     logger.info("Model saved as backup after {} epochs".format(i))
 
-        if conf['lr_scheduler']['activate']:
-            lr_scheduler.step()
 
         if is_main_process and train_logs['loss'] < 0.0001 or conf['train'][
             'early_stopping'] and count_not_improved >= 5:
@@ -331,6 +329,9 @@ def train(rank=None, world_size=None, conf=None):
                 # TODO: Fixme
                 raise KeyboardInterrupt
             break
+
+        if conf['lr_scheduler']['activate']:
+            lr_scheduler.step()
 
     if wandb_run is not None:
         wandb_run.finish()

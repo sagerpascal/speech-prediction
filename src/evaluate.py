@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import random
 from tqdm import tqdm
+import librosa
 
 from dataloader import get_loaders
 from metrics import get_metrics
@@ -153,7 +154,8 @@ def plot_one_predicted_batch(conf, loader_test, model):
     mean, std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
 
     it_loader_test = iter(loader_test)
-    data, target, mfccs, waveforms = next(it_loader_test)
+    data, target, complete_data_b, waveforms = next(it_loader_test)
+    is_mel_spectro = conf['data']['type'] = 'mel-spectro'
 
     x_t, y_t = data.to(conf['device']), target.to(conf['device'])
 
@@ -162,17 +164,25 @@ def plot_one_predicted_batch(conf, loader_test, model):
 
     i = random.randint(0, len(waveforms))
     waveform = waveforms[i]
-    mfcc = mfccs[i, :, :].squeeze().t().numpy()
+    complete_data = complete_data_b[i, :, :].squeeze().t().numpy()
     data_x = data[i, :, :].squeeze().t().numpy()
     label_gt = target[i, :, :].squeeze().t().numpy()
     label_pr = y_pred[i, :, :].squeeze().t().cpu().numpy()
 
-    mfcc = undo_zero_norm(mfcc, mean, std)
+    complete_data = undo_zero_norm(complete_data, mean, std)
     data_x = undo_zero_norm(data_x, mean, std)
     label_gt = undo_zero_norm(label_gt, mean, std)
     label_pr = undo_zero_norm(label_pr, mean, std)
 
-    vmin, vmax = np.min(mfcc), np.max(mfcc)
+
+    if is_mel_spectro:
+        complete_data = librosa.power_to_db(complete_data, ref=np.max)
+        data_x = librosa.power_to_db(data_x, ref=np.max)
+        label_gt = librosa.power_to_db(label_gt, ref=np.max)
+        label_pr = librosa.power_to_db(label_pr, ref=np.max)
+        vmin, vmax = None, None
+    else:
+        vmin, vmax = np.min(complete_data), np.max(complete_data)
 
     if waveform is not None:
         fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(15, 15))
@@ -186,8 +196,11 @@ def plot_one_predicted_batch(conf, loader_test, model):
     else:
         fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(15, 15))
         offset = 0
-    axs[0 + offset, 0].imshow(mfcc, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
-    axs[0 + offset, 0].set_title("Original MFCC")
+    axs[0 + offset, 0].imshow(complete_data, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
+    if is_mel_spectro:
+        axs[0 + offset, 0].set_title("Original Mel-Spectrogram")
+    else:
+        axs[0 + offset, 0].set_title("Original MFCC")
     axs[0 + offset, 1].imshow(data_x, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
     axs[0 + offset, 1].set_title("Input Data")
     axs[1 + offset, 0].imshow(label_gt, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
@@ -198,16 +211,18 @@ def plot_one_predicted_batch(conf, loader_test, model):
     plt.show()
 
 
-def play_audio_files(conf, loader_test, model):
-    mean, std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
+def play_audio_files(conf, loader_test, model, with_prediction=True):
+    mean = conf['data']['stats'][conf['data']['type']]['train']['mean']
+    std = conf['data']['stats'][conf['data']['type']]['train']['std']
 
     if platform.system() == "Windows":
         import sounddevice as sd
-    from librosa.feature.inverse import mfcc_to_audio
+    from librosa.feature.inverse import mfcc_to_audio, mel_to_audio
     import time
     import scipy.io.wavfile
 
     it_loader_test = iter(loader_test)
+    to_audio = mfcc_to_audio if conf['data']['type'] == 'mfcc' else mel_to_audio
 
     # select a random batch between 1 and 10
     for _ in range(random.randint(1, 10)):
@@ -218,23 +233,25 @@ def play_audio_files(conf, loader_test, model):
     x = x[random_idx, :, :]
     y = y[random_idx, :, :]
 
-    with torch.no_grad():
-        x_t, y_t = x.unsqueeze(1).to(conf['device']), y.unsqueeze(1).to(conf['device'])
-        y_pred = model.forward(x_t, y_t).squeeze()
 
     if waveform[random_idx] is not None:
         waveform = waveform[random_idx].numpy()
     else:
         waveform = None
     original = original[random_idx, :, :].squeeze().cpu().numpy()
-    y_pred = y_pred.cpu().numpy()
     x = x.cpu().numpy()
     y = y.cpu().numpy()
+
+    if with_prediction:
+        with torch.no_grad():
+            x_t, y_t = x.unsqueeze(1).to(conf['device']), y.unsqueeze(1).to(conf['device'])
+            y_pred = model.forward(x_t, y_t).squeeze()
+            y_pred = y_pred.cpu().numpy()
+            y_pred = undo_zero_norm(y_pred, mean, std)
 
     original = undo_zero_norm(original, mean, std)
     x = undo_zero_norm(x, mean, std)
     y = undo_zero_norm(y, mean, std)
-    y_pred = undo_zero_norm(y_pred, mean, std)
 
     # cut away padding
     if np.any(np.all(original == 0, axis=1)):
@@ -261,18 +278,21 @@ def play_audio_files(conf, loader_test, model):
     if conf['masking']['position'] == 'end':
         reconstructed_orig[0:x.shape[0], :] = x
         reconstructed_orig[x.shape[0]:, :] = y
-        reconstructed[0:x.shape[0], :] = x
-        reconstructed[x.shape[0]:, :] = y_pred
+        if with_prediction:
+            reconstructed[0:x.shape[0], :] = x
+            reconstructed[x.shape[0]:, :] = y_pred
     elif conf['masking']['position'] == 'beginning':
         reconstructed_orig[0:y.shape[0], :] = y
         reconstructed_orig[y.shape[0]:, :] = x
-        reconstructed[0:y.shape[0], :] = y_pred
-        reconstructed[y.shape[0]:, :] = x
+        if with_prediction:
+            reconstructed[0:y.shape[0], :] = y_pred
+            reconstructed[y.shape[0]:, :] = x
     else:
         raise NotImplementedError()
 
     reconstructed_orig = reconstructed_orig.T
-    reconstructed = reconstructed.T
+    if with_prediction:
+        reconstructed = reconstructed.T
 
     if platform.system() == "Windows":
         if waveform is not None:
@@ -280,41 +300,43 @@ def play_audio_files(conf, loader_test, model):
             time.sleep(0.5)
             sd.play(waveform.T, conf['data']['transform']['sample_rate'], blocking=True)
 
-        print("Playing MFCC of original sound...")
+        print("Playing Signal of original sound...")
         time.sleep(0.5)
-        sd.play(mfcc_to_audio(original.T, hop_length=conf['data']['transform']['hop_length']),
+        sd.play(to_audio(original.T, hop_length=conf['data']['transform']['hop_length']),
                 conf['data']['transform']['sample_rate'], blocking=True)
 
         print("Input (masked) signal...")
         time.sleep(0.5)
-        sd.play(mfcc_to_audio(x.T, hop_length=conf['data']['transform']['hop_length']),
+        sd.play(to_audio(x.T, hop_length=conf['data']['transform']['hop_length']),
                 conf['data']['transform']['sample_rate'], blocking=True)
 
-        print("Playing reconstructed signal...")
-        time.sleep(0.5)
-        sd.play(mfcc_to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length']),
-                conf['data']['transform']['sample_rate'], blocking=True)
+        if with_prediction:
+            print("Playing reconstructed signal...")
+            time.sleep(0.5)
+            sd.play(to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length']),
+                    conf['data']['transform']['sample_rate'], blocking=True)
 
         print("Playing MFCC of original sound...")
         time.sleep(0.5)
-        sd.play(mfcc_to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length']),
+        sd.play(to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length']),
                 conf['data']['transform']['sample_rate'], blocking=True)
 
     if waveform is not None:
         scipy.io.wavfile.write('eval_out/waveform.wav', conf['data']['transform']['sample_rate'], waveform.T)
-    scipy.io.wavfile.write('eval_out/MFCC.wav', conf['data']['transform']['sample_rate'],
-                           mfcc_to_audio(original.T, hop_length=conf['data']['transform']['hop_length']))
+    scipy.io.wavfile.write('eval_out/original.wav', conf['data']['transform']['sample_rate'],
+                           to_audio(original.T, hop_length=conf['data']['transform']['hop_length']))
     scipy.io.wavfile.write('eval_out/MFCC_masked.wav', conf['data']['transform']['sample_rate'],
-                           mfcc_to_audio(x.T, hop_length=conf['data']['transform']['hop_length']))
-    scipy.io.wavfile.write('eval_out/MFCC_reconstructed.wav', conf['data']['transform']['sample_rate'],
-                           mfcc_to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length']))
-    scipy.io.wavfile.write('eval_out/MFCC_reconstructed_orig.wav', conf['data']['transform']['sample_rate'],
-                           mfcc_to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length']))
+                           to_audio(x.T, hop_length=conf['data']['transform']['hop_length']))
+    if with_prediction:
+        scipy.io.wavfile.write('eval_out/reconstructed.wav', conf['data']['transform']['sample_rate'],
+                               to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length']))
+    scipy.io.wavfile.write('eval_out/reconstructed_orig.wav', conf['data']['transform']['sample_rate'],
+                           to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length']))
 
 
 def evaluate(conf):
-    if 'load_weights' not in conf or conf['load_weights'] == 'None':
-        raise AttributeError("Load a model to run evaluation script (invalid config)")
+    # if 'load_weights' not in conf or conf['load_weights'] == 'None':
+    #     raise AttributeError("Load a model to run evaluation script (invalid config)")
 
     conf['env']['world_size'] = 1
     conf['env']['use_data_parallel'] = False
@@ -323,8 +345,10 @@ def evaluate(conf):
     model = get_model(conf, conf['device'])
     metrics = get_metrics(conf, conf['device'])
 
-    calc_baseline(conf, compare_model=True)
+    calc_baseline(conf, compare_model=False)
 
     # plot_one_predicted_batch(conf, loader_test, model)
     # play_audio_files(conf, loader_test, model)
-    calc_metrics(conf, loader_test, model, metrics)
+    # calc_metrics(conf, loader_test, model, metrics)
+
+    # play_audio_files(conf, loader_test, None, with_prediction=False)

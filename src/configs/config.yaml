@@ -1,5 +1,4 @@
-mode: eval # either train or eval
-use_wandb: False
+use_wandb: True
 
 # Environment
 env:
@@ -8,18 +7,19 @@ env:
 # Mask MFCC
 masking:
   position: end # end, beginning or center
-  n_frames: 120 # max. number of input frames
-  k_frames: 30 # number of frames to predict
+  n_frames: 64 # max. number of input frames
+  k_frames: 32 # number of frames to predict
   window_shift: None # None = n_frames+k_frames
   start_idx: sliding-window # beginning (first n+k frames affected per file), random (n+k frames at random position per file), sliding-window (first n+k frames, then shift by n+k -> multiple frames per file)
 
 # Dataset
 data:
+  type: mel-spectro # mel-spectro or mfcc
   config_file: datasets/timit-original.yaml
 
 # Model settings
 model:
-  type: transformer # either unet or transformer
+  type: unet # either unet or transformer
   transformer:
     n_heads: 8
     n_encoder_layers: 6
@@ -28,12 +28,12 @@ model:
 
 # Training settings
 train:
-  max_number_of_epochs: 100
+  max_number_of_epochs: 500
   early_stopping: False
 
 # LR Scheduler
 lr_scheduler:
-  activate: True
+  activate: False
 
 # Optimizer
 optimizer:

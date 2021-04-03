@@ -1,13 +1,15 @@
-import h5pickle
-import torch
-from pathlib import Path
-from torch.utils.data import Dataset
-from datasets.preprocessing import get_mfcc_preprocess_fn
-import pandas as pd
-import torchaudio
 import os
+from pathlib import Path
+
+import h5pickle
 import numpy as np
+import pandas as pd
+import torch
+import torchaudio
+from torch.utils.data import Dataset
+
 from datasets.normalization import zero_norm, undo_zero_norm
+from datasets.preprocessing import get_frames_preprocess_fn
 from utils.conf_reader import get_config
 
 
@@ -19,30 +21,53 @@ class AudioDatasetH5(Dataset):
         meta_base_path = Path('datasets/dfs')
 
         if mode == 'train':
-            h5_fp = h5_base_path / conf['data']['paths']['h5']['train']
             ds_fp = meta_base_path / conf['data']['paths']['df']['train']
-            md_fp = meta_base_path / conf['data']['paths']['h5']['metadata']['train']
+            if conf['data']['type'] == 'mfcc':
+                h5_fp = h5_base_path / conf['data']['paths']['mfcc']['h5']['train']
+                md_fp = meta_base_path / conf['data']['paths']['mfcc']['h5']['metadata']['train']
+            elif conf['data']['type'] == 'mel-spectro':
+                h5_fp = h5_base_path / conf['data']['paths']['mel-spectro']['h5']['train']
+                md_fp = meta_base_path / conf['data']['paths']['mel-spectro']['h5']['metadata']['train']
         elif mode == 'val':
-            h5_fp = h5_base_path / conf['data']['paths']['h5']['val']
             ds_fp = meta_base_path / conf['data']['paths']['df']['val']
-            md_fp = meta_base_path / conf['data']['paths']['h5']['metadata']['val']
+            if conf['data']['type'] == 'mfcc':
+                h5_fp = h5_base_path / conf['data']['paths']['mfcc']['h5']['val']
+                md_fp = meta_base_path / conf['data']['paths']['mfcc']['h5']['metadata']['val']
+            elif conf['data']['type'] == 'mel-spectro':
+                h5_fp = h5_base_path / conf['data']['paths']['mel-spectro']['h5']['val']
+                md_fp = meta_base_path / conf['data']['paths']['mel-spectro']['h5']['metadata']['val']
         elif mode == 'test':
-            h5_fp = h5_base_path / conf['data']['paths']['h5']['test']
             ds_fp = meta_base_path / conf['data']['paths']['df']['test']
-            md_fp = meta_base_path / conf['data']['paths']['h5']['metadata']['test']
+            if conf['data']['type'] == 'mfcc':
+                h5_fp = h5_base_path / conf['data']['paths']['mfcc']['h5']['test']
+                md_fp = meta_base_path / conf['data']['paths']['mfcc']['h5']['metadata']['test']
+            elif conf['data']['type'] == 'mel-spectro':
+                h5_fp = h5_base_path / conf['data']['paths']['mel-spectro']['h5']['test']
+                md_fp = meta_base_path / conf['data']['paths']['mel-spectro']['h5']['metadata']['test']
         else:
             raise AttributeError("Unknown mode: {}".format(mode))
 
         self.metadata_df = pd.read_csv(md_fp)
 
         # std and mean from training set
-        self.mean, self.std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
+        if conf['data']['type'] == 'mfcc':
+            self.mean = conf['data']['stats']['mfcc']['train']['mean']
+            self.std = conf['data']['stats']['mfcc']['train']['std']
+            self.length_key, self.start_key, self.end_key = 'MFCC_length', 'MFCC_start', 'MFCC_end'
+            self.file_key = 'MFCC'
+
+        elif conf['data']['type'] == 'mel-spectro':
+            self.mean = conf['data']['stats']['mel-spectro']['train']['mean']
+            self.std = conf['data']['stats']['mel-spectro']['train']['std']
+            self.length_key, self.start_key = 'mel_spectro_length', 'mel_spectro_start'
+            self.end_key, self.file_key = 'mel_spectro_end', 'Mel-Spectrogram'
+
+        self.preprocess = get_frames_preprocess_fn(mask_pos=conf['masking']['position'],
+                                                   n_frames=conf['masking']['n_frames'],
+                                                   k_frames=conf['masking']['k_frames'],
+                                                   start_idx=conf['masking']['start_idx'])
 
         self.h5_file = h5pickle.File(str(h5_fp.resolve()), 'r', skip_cache=False)  # , libver='latest', swmr=True)
-        self.preprocess = get_mfcc_preprocess_fn(mask_pos=conf['masking']['position'],
-                                                 n_frames=conf['masking']['n_frames'],
-                                                 k_frames=conf['masking']['k_frames'],
-                                                 start_idx=conf['masking']['start_idx'])
 
         self.k_frames = conf['masking']['k_frames']
         self.n_frames = conf['masking']['n_frames']
@@ -51,7 +76,7 @@ class AudioDatasetH5(Dataset):
         self.with_waveform = with_waveform
 
         # ignore all files < k_frames + n_frames
-        valid_idx = self.metadata_df['MFCC_length'] >= (self.n_frames + self.k_frames)
+        valid_idx = self.metadata_df[self.length_key] >= (self.n_frames + self.k_frames)
         self.metadata_df = self.metadata_df[valid_idx]
 
         if self.with_waveform:
@@ -62,10 +87,10 @@ class AudioDatasetH5(Dataset):
 
         # calculate new index mapping if with sliding window
         if self.sliding_window:
-            self.sliding_window_indexes = {}  # mapping item -> [index_dataframe, mfcc_start, mfcc_end]
+            self.sliding_window_indexes = {}  # mapping item -> [index_dataframe, start_key, end_key]
             item_count = 0
             for index, row in self.metadata_df.iterrows():
-                length, start, end = row['MFCC_length'], row['MFCC_start'], row['MFCC_end']
+                length, start, end = row[self.length_key], row[self.start_key], row[self.end_key]
 
                 while self.window_shift <= length:
                     assert start + self.window_shift <= end
@@ -83,11 +108,11 @@ class AudioDatasetH5(Dataset):
     def __getitem__(self, item):
 
         if self.sliding_window:
-            index_dataframe, mfcc_start, mfcc_end = self.sliding_window_indexes[item]
+            index_dataframe, start_idx, end_idx = self.sliding_window_indexes[item]
         else:
             index_dataframe = item
-            mfcc_start = self.metadata_df['MFCC_start'][index_dataframe]
-            mfcc_end = self.metadata_df['MFCC_end'][index_dataframe]
+            start_idx = self.metadata_df[self.start_key][index_dataframe]
+            end_idx = self.metadata_df[self.end_key][index_dataframe]
 
         if self.with_waveform:
             file = self.dataset_df['file_path'][index_dataframe]
@@ -96,17 +121,13 @@ class AudioDatasetH5(Dataset):
             waveform = None
 
         speaker = self.metadata_df['Speaker'][index_dataframe]
-        mfcc = self.h5_file['MFCC'][:, :, mfcc_start:mfcc_end]
-        mfcc = zero_norm(mfcc, self.mean, self.std)
+        complete_data = self.h5_file[self.file_key][:, :, start_idx:end_idx]  # mfcc or mel-spectro
+        complete_data = zero_norm(complete_data, self.mean, self.std)
 
-        # mfcc_start, mfcc_end = self.h5_file['META'][item]
-        # speaker = self.h5_file['Speaker'][item][0].decode('ascii')
-        # filepath = self.h5_file['Filepath'][item][0].decode('ascii')
+        complete_data = torch.from_numpy(complete_data)
+        data, target = self.preprocess(complete_data)
 
-        mfcc = torch.from_numpy(mfcc)
-        data, target = self.preprocess(mfcc)
-
-        return data, target, mfcc, waveform, speaker
+        return data, target, complete_data, waveform, speaker
 
     def __len__(self):
         return self.dataset_length
@@ -122,7 +143,7 @@ def play_some_data():
 
     conf = get_config()
     dataset = AudioDatasetH5(conf, 'train', with_waveform=False)
-    mean, std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
+    mean, std = conf['data']['stats']['mfcc']['train']['mean'], conf['data']['stats']['mfcc']['train']['std']
 
     for i in range(3):
         idx = random.randint(0, len(dataset))
@@ -157,7 +178,8 @@ def test_sliding_window():
     conf['masking']['window_shift'] = 60
     conf['masking']['n_frames'] = 30
     conf['masking']['k_frames'] = 20
-    mean, std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
+    mean = conf['data']['stats'][conf['data']['type']]['train']['mean']
+    std = conf['data']['stats'][conf['data']['type']]['train']['std']
 
     h5_fp = Path('/workspace/data_pa/') / conf['data']['paths']['h5']['train']
     h5_file = h5pickle.File(str(h5_fp.resolve()), 'r', skip_cache=False)
@@ -179,12 +201,22 @@ def test_sliding_window():
     mfcc_1 = undo_zero_norm(mfcc_1, mean, std)
 
     assert np.allclose(mfcc_orig[:, :, :conf['masking']['n_frames']], data_0, atol=0.0001)
-    assert np.allclose(mfcc_orig[:, :, conf['masking']['n_frames']:conf['masking']['n_frames']+conf['masking']['k_frames']], target_0, atol=0.0001)
-    assert np.allclose(mfcc_orig[:, :, :conf['masking']['n_frames']+conf['masking']['k_frames']], mfcc_0, atol=0.0001)
+    assert np.allclose(
+        mfcc_orig[:, :, conf['masking']['n_frames']:conf['masking']['n_frames'] + conf['masking']['k_frames']],
+        target_0, atol=0.0001)
+    assert np.allclose(mfcc_orig[:, :, :conf['masking']['n_frames'] + conf['masking']['k_frames']], mfcc_0, atol=0.0001)
 
-    assert np.allclose(mfcc_orig[:, :, conf['masking']['window_shift']:conf['masking']['window_shift']+conf['masking']['n_frames']], data_1, atol=0.0001)
-    assert np.allclose(mfcc_orig[:, :, conf['masking']['window_shift']+conf['masking']['n_frames']:conf['masking']['window_shift']+conf['masking']['n_frames']+conf['masking']['k_frames']], target_1, atol=0.0001)
-    assert np.allclose(mfcc_orig[:, :, conf['masking']['window_shift']:conf['masking']['window_shift']+conf['masking']['n_frames']+conf['masking']['k_frames']], mfcc_1, atol=0.0001)
+    assert np.allclose(
+        mfcc_orig[:, :, conf['masking']['window_shift']:conf['masking']['window_shift'] + conf['masking']['n_frames']],
+        data_1, atol=0.0001)
+    assert np.allclose(mfcc_orig[:, :,
+                       conf['masking']['window_shift'] + conf['masking']['n_frames']:conf['masking']['window_shift'] +
+                                                                                     conf['masking']['n_frames'] +
+                                                                                     conf['masking']['k_frames']],
+                       target_1, atol=0.0001)
+    assert np.allclose(mfcc_orig[:, :,
+                       conf['masking']['window_shift']:conf['masking']['window_shift'] + conf['masking']['n_frames'] +
+                                                       conf['masking']['k_frames']], mfcc_1, atol=0.0001)
 
 
 if __name__ == '__main__':

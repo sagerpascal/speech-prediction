@@ -2,7 +2,7 @@ import pandas as pd
 from pathlib import Path
 import torchaudio
 from torch.utils.data import Dataset
-from datasets.preprocessing import get_mfcc_transform, get_mfcc_preprocess_fn
+from datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform, get_frames_preprocess_fn
 from datasets.normalization import zero_norm
 
 
@@ -29,13 +29,21 @@ class AudioDataset(Dataset):
 
         self.df = pd.read_csv(df_fp)
 
-        self.mean, self.std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
+        if conf['data']['type'] == 'mfcc':
+            self.mean = conf['data']['stats']['mfcc']['train']['mean']
+            self.std = conf['data']['stats']['mfcc']['train']['std']
+            self.transform = get_mfcc_transform(conf).to('cuda')
+            self.length_key = 'MFCC_length'
 
-        self.mfcc_transform = get_mfcc_transform(conf).to('cuda')
-        self.preprocess = get_mfcc_preprocess_fn(mask_pos=conf['masking']['position'],
-                                                 n_frames=conf['masking']['n_frames'],
-                                                 k_frames=conf['masking']['k_frames'],
-                                                 start_idx=conf['masking']['start_idx'])
+        elif conf['data']['type'] == 'mel-spectro':
+            self.mean = conf['data']['stats']['mel-spectro']['train']['mean']
+            self.std = conf['data']['stats']['mel-spectro']['train']['std']
+            self.transform = get_mel_spectro_transform(conf).to('cuda')
+
+        self.preprocess = get_frames_preprocess_fn(mask_pos=conf['masking']['position'],
+                                                   n_frames=conf['masking']['n_frames'],
+                                                   k_frames=conf['masking']['k_frames'],
+                                                   start_idx=conf['masking']['start_idx'])
 
         self.k_frames = conf['masking']['k_frames']
         self.n_frames = conf['masking']['n_frames']
@@ -43,7 +51,7 @@ class AudioDataset(Dataset):
         self.sliding_window = conf['masking']['start_idx'] == 'sliding-window'
 
         # ignore all files < k_frames + n_frames
-        self.df = self.df[self.df['MFCC_length'] >= (self.n_frames + self.k_frames)]
+        self.df = self.df[self.df[self.length_key] >= (self.n_frames + self.k_frames)]
         print("{} set has {} valid entries".format(mode, len(self.df)))
 
         # calculate new index mapping if with sliding window
@@ -51,7 +59,7 @@ class AudioDataset(Dataset):
             self.sliding_window_indexes = {}  # mapping item -> [index_dataframe, mfcc_start, mfcc_end]
             item_count = 0
             for index, row in self.df.iterrows():
-                length, start = row['MFCC_length'], 0
+                length, start = row[self.length_key], 0
 
                 while self.window_shift <= length:
                     assert start + self.window_shift <= length
@@ -69,21 +77,21 @@ class AudioDataset(Dataset):
     def __getitem__(self, item):
 
         if self.sliding_window:
-            index_dataframe, mfcc_start, mfcc_end = self.sliding_window_indexes[item]
+            index_dataframe, start_idx, end_idx = self.sliding_window_indexes[item]
         else:
             index_dataframe = item
 
         waveform = torchaudio.load(self.df['file_path'][index_dataframe])
         speaker = self.df['speaker'][index_dataframe]
 
-        mfcc = self.mfcc_transform(waveform[0])
+        complete_data = self.transform(waveform[0])  # either mfcc or mel-spectrogram
         if self.sliding_window:
-            mfcc = mfcc[:, :, mfcc_start:mfcc_end]
+            complete_data = complete_data[:, :, start_idx:end_idx]
 
-        mfcc = zero_norm(mfcc, self.mean, self.std)  # normalize
-        data, target = self.preprocess(mfcc)
+        complete_data = zero_norm(complete_data, self.mean, self.std)  # normalize
+        data, target = self.preprocess(complete_data)
 
-        return data, target, mfcc, waveform[0], speaker
+        return data, target, complete_data, waveform[0], speaker
 
     def __len__(self):
         return self.dataset_length

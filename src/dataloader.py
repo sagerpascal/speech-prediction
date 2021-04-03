@@ -1,10 +1,12 @@
 import platform
-from torch.utils.data.distributed import DistributedSampler
+
 from torch.utils.data import DataLoader
-from datasets.torch_speech_commands import SubsetSC
+from torch.utils.data.distributed import DistributedSampler
+
+from datasets.collate import collate_fn
 from datasets.dataset import AudioDataset
 from datasets.dataset_h5 import AudioDatasetH5
-from datasets.collate import collate_fn
+from datasets.torch_speech_commands import SubsetSC
 
 
 def _get_loader(conf, train_set, val_set, test_set, rank=None):
@@ -77,7 +79,8 @@ def _get_torch_speech_commands(conf, device):
 
 
 def _get_dataset(conf, device, with_waveform):
-    if conf.get('data').get('paths').get('h5') is not None:
+    if conf['data']['type'] == 'mfcc' and conf['data'].get('paths').get('mfcc').get('h5') is not None or \
+            conf['data']['type'] == 'mel-spectro' and conf['data'].get('paths').get('mel-spectro').get('h5') is not None:
         train_set = AudioDatasetH5(conf, mode='train', with_waveform=with_waveform)
         val_set = AudioDatasetH5(conf, mode='val', with_waveform=with_waveform)
         test_set = AudioDatasetH5(conf, mode='test', with_waveform=with_waveform)

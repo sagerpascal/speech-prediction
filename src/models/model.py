@@ -1,6 +1,11 @@
 import logging
+
 import torch
+
 from models.transformer import CustomTransformer
+from models.unet import CustomUnet
+from models.simple_cnn import SimpleCNN
+# from torchsummary import summary
 
 # mit TIMIT: https://github.com/hirofumi0810/neural_sp
 # mit TIMIT: https://github.com/okkteam/Transformer-Transducer
@@ -15,18 +20,23 @@ def get_model(conf, device):
     print("{} GPU's available".format(torch.cuda.device_count()))
 
     if conf['model']['type'] == 'transformer':
+        d_model = conf['data']['transform']['n_mfcc'] if conf['data']['type'] == 'mfcc' else conf['data']['transform'][
+            'n_mels']
         model = CustomTransformer(conf, device,
-                                  d_model=conf['data']['transform']['n_mfcc'],
+                                  d_model=d_model,
                                   nhead=conf['model']['transformer']['n_heads'],
                                   num_encoder_layers=conf['model']['transformer']['n_encoder_layers'],
                                   num_decoder_layers=conf['model']['transformer']['n_decoder_layers'])
 
     elif conf['model']['type'] == 'unet':
-        raise NotImplementedError()
+        model = CustomUnet(conf)
+    elif conf['model']['type'] == 'cnn':
+        model = SimpleCNN(conf)
     else:
         raise AttributeError("Unknown Model in config file: {}".format(conf['model']['type']))
 
-    # print(model)
+    print(model)
+    # print(summary(model.to(device), (1, 60, 128), 32))
     print("Model has {} parameters".format(count_parameters(model)))
 
     if 'load_weights' in conf and conf['load_weights'] != 'None':

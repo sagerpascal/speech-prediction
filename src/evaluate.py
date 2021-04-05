@@ -16,11 +16,28 @@ from utils.meter import AverageValueMeter
 from datasets.collate import collate_fn_debug
 from datasets.normalization import undo_zero_norm
 
-def calc_baseline(conf, compare_model=False):
+
+# U-Net with Mel-Spectrogram
+best_results_train = {
+    4: 0.07076,  # astral-yogurt-18
+    8: 0.1166,  # snowy-snow-17
+    16: 0.1702,  # polar-night-16
+    32: 0.2168,  # whole-wood-15
+}
+
+# U-Net with Mel-Spectrogram
+best_results_test = {
+    4: 0.999,  # astral-yogurt-18
+    8: 0.999,  # snowy-snow-17
+    16: 0.999,  # polar-night-16
+    32: 0.5968,  # whole-wood-15
+}
+
+def calc_baseline(conf, compare_model=False, plot_best_results=False):
     mse_mean = []  # mse for different k if the average of x is predicted
     mse_last = []  # mse for different k, if always the last frame of x is predicted
     mse_model = [] # mse for the prediction of the model
-    range_k = list(range(1, 31))
+    range_k = list(range(1, 33))
     for k_frames in range_k:
         conf['masking']['k_frames'] = k_frames
         conf['masking']['window_shift'] = conf['masking']['n_frames'] + k_frames
@@ -91,10 +108,22 @@ def calc_baseline(conf, compare_model=False):
     if compare_model:
         plt.plot(range_k, mse_mean, 'bs-', range_k, mse_last, 'g^-', range_k, mse_model, 'ro-')
         plt.legend(['Mean of x', 'Last value of x', 'Model Prediction'])
+    elif plot_best_results:
+        mse_train, mse_train_r, mse_test, mse_test_r = [], [], [], []
+        for k, v in best_results_train.items():
+            mse_train_r.append(k)
+            mse_train.append(v)
+        for k, v in best_results_test.items():
+            mse_test_r.append(k)
+            mse_test.append(v)
+        plt.plot(range_k, mse_mean, 'bs-', range_k, mse_last, 'g^-', mse_train_r, mse_train, 'ro--', mse_test_r, mse_test, 'ro-')
+        plt.legend(['Mean of x', 'Last value of x', 'Prediction Train', 'Prediction Test'])
+
+
     else:
         plt.plot(range_k, mse_mean, 'bs-', range_k, mse_last, 'g^-')
         plt.legend(['Mean of x', 'Last value of x'])
-    plt.title('MSE Baseline Predictions (n={}, s={})'.format(conf['masking']['n_frames'], conf['masking']['window_shift']))
+    plt.title('MSE Baseline Predictions (n={})'.format(conf['masking']['n_frames']))
     plt.xlabel('Number of masked frames k')
     plt.ylabel('MSE')
     plt.grid()
@@ -345,10 +374,10 @@ def evaluate(conf):
     model = get_model(conf, conf['device'])
     metrics = get_metrics(conf, conf['device'])
 
-    calc_baseline(conf, compare_model=False)
+    # calc_baseline(conf, compare_model=False, plot_best_results=True)
 
     # plot_one_predicted_batch(conf, loader_test, model)
     # play_audio_files(conf, loader_test, model)
-    # calc_metrics(conf, loader_test, model, metrics)
+    calc_metrics(conf, loader_test, model, metrics)
 
     # play_audio_files(conf, loader_test, None, with_prediction=False)

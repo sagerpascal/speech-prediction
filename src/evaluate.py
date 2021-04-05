@@ -27,9 +27,9 @@ best_results_train = {
 
 # U-Net with Mel-Spectrogram
 best_results_test = {
-    4: 0.999,  # astral-yogurt-18
-    8: 0.999,  # snowy-snow-17
-    16: 0.999,  # polar-night-16
+    4: 0.3458,  # astral-yogurt-18
+    8: 0.5539,  # snowy-snow-17
+    16: 0.6387,  # polar-night-16
     32: 0.5968,  # whole-wood-15
 }
 

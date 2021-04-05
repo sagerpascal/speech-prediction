@@ -316,10 +316,10 @@ def train(rank=None, world_size=None, conf=None):
                 filename = store.get("model_filename").decode("utf-8")
                 model.load_state_dict(torch.load(filename, map_location=map_location))
 
-        # if i % 50 == 0 and is_main_process:
-        #     model_name = "{}_backup.pth".format(wandb.run.name) if conf['use_wandb'] else 'model_backup.pth'
-        #     save_model(model, '/workspace/data_pa/trained_models', model_name, save_wandb=False)
-        #     logger.info("Model saved as backup after {} epochs".format(i))
+        if i % 50 == 0 and is_main_process:
+            model_name = "{}_backup.pth".format(wandb.run.name) if conf['use_wandb'] else 'model_backup.pth'
+            save_model(model, '/workspace/data_pa/trained_models', model_name, save_wandb=False)
+            logger.info("Model saved as backup after {} epochs".format(i))
 
 
         if is_main_process and train_logs['loss'] < 0.0001 or conf['train'][

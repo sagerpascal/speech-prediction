@@ -7,6 +7,7 @@ import torch
 import random
 from tqdm import tqdm
 import librosa
+from sklearn.metrics import mean_squared_error
 
 from dataloader import get_loaders
 from metrics import get_metrics
@@ -180,64 +181,72 @@ def calc_metrics(conf, loader_test, model, metrics):
 
 
 def plot_one_predicted_batch(conf, loader_test, model):
-    mean, std = conf['data']['stats']['train']['mean'], conf['data']['stats']['train']['std']
 
     it_loader_test = iter(loader_test)
     data, target, complete_data_b, waveforms = next(it_loader_test)
     is_mel_spectro = conf['data']['type'] = 'mel-spectro'
+
+    if is_mel_spectro:
+        mean, std = conf['data']['stats']['mel-spectro']['train']['mean'], conf['data']['stats']['mel-spectro']['train']['std']
+    else:
+        mean, std = conf['data']['stats']['mfcc']['train']['mean'], conf['data']['stats']['mfcc']['train']['std']
 
     x_t, y_t = data.to(conf['device']), target.to(conf['device'])
 
     with torch.no_grad():
         y_pred = model.predict(x_t)
 
-    i = random.randint(0, len(waveforms))
-    waveform = waveforms[i]
-    complete_data = complete_data_b[i, :, :].squeeze().t().numpy()
-    data_x = data[i, :, :].squeeze().t().numpy()
-    label_gt = target[i, :, :].squeeze().t().numpy()
-    label_pr = y_pred[i, :, :].squeeze().t().cpu().numpy()
+    print(torch.nn.functional.mse_loss(y_pred.to('cpu'), target.to('cpu')))
 
-    complete_data = undo_zero_norm(complete_data, mean, std)
-    data_x = undo_zero_norm(data_x, mean, std)
-    label_gt = undo_zero_norm(label_gt, mean, std)
-    label_pr = undo_zero_norm(label_pr, mean, std)
+    for i in range(len(waveforms)):
+        waveform = waveforms[i]
+        complete_data = complete_data_b[i, :, :].squeeze().t().numpy()
+        data_x = data[i, :, :].squeeze().t().numpy()
+        label_gt = target[i, :, :].squeeze().t().numpy()
+        label_pr = y_pred[i, :, :].squeeze().t().cpu().numpy()
+
+        mse = mean_squared_error(label_gt, label_pr)
+
+        complete_data = undo_zero_norm(complete_data, mean, std)
+        data_x = undo_zero_norm(data_x, mean, std)
+        label_gt = undo_zero_norm(label_gt, mean, std)
+        label_pr = undo_zero_norm(label_pr, mean, std)
 
 
-    if is_mel_spectro:
-        complete_data = librosa.power_to_db(complete_data, ref=np.max)
-        data_x = librosa.power_to_db(data_x, ref=np.max)
-        label_gt = librosa.power_to_db(label_gt, ref=np.max)
-        label_pr = librosa.power_to_db(label_pr, ref=np.max)
-        vmin, vmax = None, None
-    else:
-        vmin, vmax = np.min(complete_data), np.max(complete_data)
+        if is_mel_spectro:
+            complete_data = librosa.power_to_db(complete_data, ref=np.max)
+            data_x = librosa.power_to_db(data_x, ref=np.max)
+            label_gt = librosa.power_to_db(label_gt, ref=np.max)
+            label_pr = librosa.power_to_db(label_pr, ref=np.max)
+            vmin, vmax = None, None
+        else:
+            vmin, vmax = np.min(complete_data), np.max(complete_data)
 
-    if waveform is not None:
-        fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(15, 15))
-        gs = axs[0, 0].get_gridspec()
-        axs[0, 0].remove()
-        axs[0, 1].remove()
-        axbig = fig.add_subplot(gs[0, :])
-        axbig.plot(waveform.numpy().T)
-        axbig.set_title("Waveform")
-        offset = 1
-    else:
-        fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(15, 15))
-        offset = 0
-    axs[0 + offset, 0].imshow(complete_data, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
-    if is_mel_spectro:
-        axs[0 + offset, 0].set_title("Original Mel-Spectrogram")
-    else:
-        axs[0 + offset, 0].set_title("Original MFCC")
-    axs[0 + offset, 1].imshow(data_x, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
-    axs[0 + offset, 1].set_title("Input Data")
-    axs[1 + offset, 0].imshow(label_gt, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
-    axs[1 + offset, 0].set_title("Groud Truth")
-    axs[1 + offset, 1].imshow(label_pr, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
-    axs[1 + offset, 1].set_title("Prediction")
-    plt.tight_layout()
-    plt.show()
+        if waveform is not None:
+            fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(15, 15))
+            gs = axs[0, 0].get_gridspec()
+            axs[0, 0].remove()
+            axs[0, 1].remove()
+            axbig = fig.add_subplot(gs[0, :])
+            axbig.plot(waveform.numpy().T)
+            axbig.set_title("Waveform")
+            offset = 1
+        else:
+            fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(15, 15))
+            offset = 0
+        axs[0 + offset, 0].imshow(complete_data, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
+        if is_mel_spectro:
+            axs[0 + offset, 0].set_title("Original Mel-Spectrogram")
+        else:
+            axs[0 + offset, 0].set_title("Original MFCC")
+        axs[0 + offset, 1].imshow(data_x, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
+        axs[0 + offset, 1].set_title("Input Data")
+        axs[1 + offset, 0].imshow(label_gt, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
+        axs[1 + offset, 0].set_title("Groud Truth")
+        axs[1 + offset, 1].imshow(label_pr, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
+        axs[1 + offset, 1].set_title("Prediction (MSE={})".format(mse))
+        plt.tight_layout()
+        plt.show()
 
 
 def play_audio_files(conf, loader_test, model, with_prediction=True):
@@ -258,7 +267,7 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
         x, y, original, waveform = next(it_loader_test)
 
     # only use one example from batch -> select a random batch
-    random_idx = random.randint(0, x.shape[1] - 1)
+    random_idx = random.randint(0, x.shape[0] - 1)
     x = x[random_idx, :, :]
     y = y[random_idx, :, :]
 
@@ -267,54 +276,48 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
         waveform = waveform[random_idx].numpy()
     else:
         waveform = None
-    original = original[random_idx, :, :].squeeze().cpu().numpy()
-    x = x.cpu().numpy()
-    y = y.cpu().numpy()
 
     if with_prediction:
         with torch.no_grad():
-            x_t, y_t = x.unsqueeze(1).to(conf['device']), y.unsqueeze(1).to(conf['device'])
-            y_pred = model.forward(x_t, y_t).squeeze()
+            x_t, y_t = x.unsqueeze(0).to(conf['device']), y.unsqueeze(0).to(conf['device'])
+            y_pred = model.forward(x_t).squeeze()
             y_pred = y_pred.cpu().numpy()
             y_pred = undo_zero_norm(y_pred, mean, std)
+
+    original = original[random_idx, :, :].squeeze().cpu().numpy()
+    x = x.cpu().numpy()
+    y = y.cpu().numpy()
 
     original = undo_zero_norm(original, mean, std)
     x = undo_zero_norm(x, mean, std)
     y = undo_zero_norm(y, mean, std)
 
-    # cut away padding
-    if np.any(np.all(original == 0, axis=1)):
-        sample_end = np.min(np.argwhere(np.all(original == 0, axis=1)))
-        original = original[:sample_end, :]
-        x = x[:sample_end, :]
-        if waveform is not None:
-            waveform = waveform[:sample_end]
-
     # # Just for comparison...
-    # reconstructed_orig = x.copy()
-    # start_idx = np.min(np.argwhere(np.all(x == 0, axis=1)))
-    # reconstructed_orig[start_idx:start_idx + y.shape[0], :] = y
+    # reconstructed_orig = np.zeros((x.shape[0] + y.shape[0], y.shape[1]))
+    # reconstructed_orig[:x.shape[0], :] = x
+    # reconstructed_orig[x.shape[0]:, :] = y
     # reconstructed_orig = reconstructed_orig.T
     #
     # # reconstruct signal from input and prediction
-    # reconstructed = x.copy()
-    # reconstructed[start_idx:start_idx + y.shape[0], :] = y_pred
+    # reconstructed = np.zeros((x.shape[0] + y.shape[0], y.shape[1]))
+    # reconstructed[:x.shape[0], :] = x
+    # reconstructed[x.shape[0]:, :] = y_pred
     # reconstructed = reconstructed.T
 
     reconstructed_orig = np.zeros((x.shape[0] + y.shape[0], x.shape[1]), dtype=np.float)
     reconstructed = np.zeros((x.shape[0] + y.shape[0], x.shape[1]), dtype=np.float)
 
     if conf['masking']['position'] == 'end':
-        reconstructed_orig[0:x.shape[0], :] = x
+        reconstructed_orig[:x.shape[0], :] = x
         reconstructed_orig[x.shape[0]:, :] = y
         if with_prediction:
-            reconstructed[0:x.shape[0], :] = x
+            reconstructed[:x.shape[0], :] = x
             reconstructed[x.shape[0]:, :] = y_pred
     elif conf['masking']['position'] == 'beginning':
-        reconstructed_orig[0:y.shape[0], :] = y
+        reconstructed_orig[:y.shape[0], :] = y
         reconstructed_orig[y.shape[0]:, :] = x
         if with_prediction:
-            reconstructed[0:y.shape[0], :] = y_pred
+            reconstructed[:y.shape[0], :] = y_pred
             reconstructed[y.shape[0]:, :] = x
     else:
         raise NotImplementedError()

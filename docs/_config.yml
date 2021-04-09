@@ -9,14 +9,14 @@ site_author: Pascal Sager
 repo_url: https://github.com/sagerpascal/temporal-speech-context
 
 # local theme
-theme: jekyll-rtd-theme
-debug:
-  compress: false
-  dist: true
-  shortcodes: true
+#theme: jekyll-rtd-theme
+#debug:
+#  compress: false
+#  dist: true
+#  shortcodes: true
 
 # remote theme
-#remote_theme: rundocs/jekyll-rtd-theme
+remote_theme: rundocs/jekyll-rtd-theme
 
 readme_index:
   with_frontmatter: true

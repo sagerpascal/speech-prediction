@@ -28,6 +28,7 @@ model:
 
 # Training settings
 train:
+  loss: soft-dtw # either soft-dtw or mse
   max_number_of_epochs: 500
   early_stopping: False
 

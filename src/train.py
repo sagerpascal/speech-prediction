@@ -6,9 +6,8 @@ from pathlib import Path
 import torch
 import wandb
 from tqdm import tqdm
-import numpy as np
 from dataloader import get_loaders
-from loss import get_loss
+from losses.loss import get_loss
 from metrics import get_metrics
 from models.model import get_model
 from optimizer import get_optimizer, get_lr
@@ -16,7 +15,7 @@ from utils.log import format_logs
 from utils.meter import AverageValueMeter
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
-from utils.ddp import setup, cleanup
+from utils.ddp import setup
 
 logger = logging.getLogger(__name__)
 
@@ -107,9 +106,7 @@ class TrainEpoch(Epoch):
     def batch_update(self, x, y):
         self.optimizer.zero_grad()
         output = self.model.forward(x, y)
-        # TODO with custom transformer model: output, encoder_log_probs, input_lengths = self.model.forward(x, input_lengths, y)
-        # TODO: classification with transformer:  torch.nn.functional.cross_entropy(output, y)
-        loss = torch.nn.functional.mse_loss(output, y)
+        loss = self.loss(output, y)
         loss.backward()
         self.optimizer.step()
         return loss, output
@@ -133,10 +130,9 @@ class ValidEpoch(Epoch):
     def batch_update(self, x, y):
         with torch.no_grad():
             # https://datascience.stackexchange.com/questions/81727/what-would-be-the-target-input-for-transformer-decoder-during-test-phase
-            # TODO with custom transformer model: output, encoder_log_probs, input_lengths  = self.model.forward(x, input_lengths, y)
             # output = self.model.forward(x, y)
             output = self.model.predict(x)
-            loss = torch.nn.functional.mse_loss(output, y)
+            loss = self.loss(output, y)
         return loss, output
 
 

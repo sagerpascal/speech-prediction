@@ -12,6 +12,7 @@ from sklearn.metrics import mean_squared_error
 from dataloader import get_loaders
 from metrics import get_metrics
 from models.model import get_model
+from losses.loss import get_loss
 from utils.log import format_logs
 from utils.meter import AverageValueMeter
 from datasets.collate import collate_fn_debug
@@ -79,6 +80,7 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False):
                     predictions['model'] = y_pred_model
                 for pred_type, pred in predictions.items():
 
+                    # TODO: is not really the loss but the MSE
                     loss = torch.nn.functional.mse_loss(pred, y)
 
                     # update logs: loss value
@@ -149,6 +151,7 @@ def calc_metrics(conf, loader_test, model, metrics):
     logs = {}
     loss_meter = AverageValueMeter()
     metrics_meters = {metric.__name__: AverageValueMeter() for metric in metrics}
+    loss_func = get_loss(conf)
 
     with tqdm(loader_test, desc='evaluate (test set)', file=sys.stdout) as iterator:
         for x, y, *_ in iterator:
@@ -156,7 +159,7 @@ def calc_metrics(conf, loader_test, model, metrics):
             x, y = x.to(conf['device']), y.to(conf['device'])
             with torch.no_grad():
                 y_pred = model.predict(x)  # model.forward(x, y)
-                loss = torch.nn.functional.mse_loss(y_pred, y)
+                loss = loss_func(y_pred, y)
 
                 # update logs: loss value
                 loss_value = loss.cpu().detach().numpy()
@@ -196,7 +199,7 @@ def plot_one_predicted_batch(conf, loader_test, model):
     with torch.no_grad():
         y_pred = model.predict(x_t)
 
-    print(torch.nn.functional.mse_loss(y_pred.to('cpu'), target.to('cpu')))
+    print("MSE = {}".format(torch.nn.functional.mse_loss(y_pred.to('cpu'), target.to('cpu'))))
 
     for i in range(len(waveforms)):
         waveform = waveforms[i]

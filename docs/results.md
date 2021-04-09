@@ -69,11 +69,7 @@ Figure 4 shows that this U-Net++ implementation was able to outperform the two s
 </p>
 
 If only one frame has to be predicted ($$k=1$$), then using the last given frame is considered a good prediction. This prediction has an average MSE of 0.15. Therefore, predictions with a MSE $$\leq 0.15$$ are in general considered as good predictions. 
-
-
-
-
-
+However, such results are achieved only for very short sequences. Moreover, the results are not satisfactory when viewed visually or acoustically, despite this small MSE.
 
 #### Why it is Challenging
 The TIMIT data set consists of different speakers saying the same sentences. Predicting the following words based on some given words would be easy if it would be text. This is because each word can be represented by a token. For audio files, however, this is much more complex. A single word consists of several frames. In addition, each speaker pronounces the words differently (speed, pitch, glitches, pauses, mood, ...). Thus, the words cannot be represented by a token but by a 2D vector (features x time). 
@@ -86,7 +82,9 @@ This issue is demonstrated in the following. A typical phrase from the TIMIT dat
       <i> Figure 5: The Mel-Spectrograms of two men saying the sentence "She had your dark suit in greasy wash water all year" as similar as possible.</i>
 </p>
 
-The MSE between these two spectrograms is $$MSE=0.3917$$, which is a good result. However, with this result, there is also some luck involved. The whole procedure was repeated. Figure 6 shows two more Mel-Spectrograms, which match well optically. 
+The MSE between these two spectrograms is $$MSE=0.3917$$, which is not too bad. However, the result of this prediction sounds good acoustically and looks good visually as well. This is remarkable because the MSE is factors larger than when a model is used for prediction. Although the MSE is much smaller with model prediction, the result is visually and acoustically worse.
+
+However, with this result, there is also some luck involved. The whole procedure was repeated. Figure 6 shows two more Mel-Spectrograms, which match well optically. 
 
 <p align="center">
       <img src="assets/results/speaker_comparison_female.png" alt="Mel-Spectrograms" width="70%" />
@@ -96,3 +94,4 @@ The MSE between these two spectrograms is $$MSE=0.3917$$, which is a good result
 
 These two spectrograms have an MSE of 2.981. This is worse than simply taking the average of the previous frames as the prediction. 
 
+These two tests show that only the MSE cannot really be used to infer quality. With the MSE, individual features of frames are compared. Thus it can happen that a relatively good prediction (i.e. a very similar sequence) has a much larger MSE than the prediction of a simple model (i.e. average value or U-Net). The MSE is larger, although the prediction is visually as well as acoustically better. This suggests that the MSE does not necessarily represent the necessary criteria.

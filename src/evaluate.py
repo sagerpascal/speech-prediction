@@ -35,10 +35,18 @@ best_results_test = {
     32: 0.5968,  # whole-wood-15
 }
 
-def calc_baseline(conf, compare_model=False, plot_best_results=False):
+def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_loss=True):
     mse_mean = []  # mse for different k if the average of x is predicted
     mse_last = []  # mse for different k, if always the last frame of x is predicted
     mse_model = [] # mse for the prediction of the model
+
+    if use_mse_loss:
+        loss_func = torch.nn.functional.mse_loss
+        loss_name = 'MSE'
+    else:
+        loss_func = get_loss(conf)
+        loss_name = 'Loss'
+
     range_k = list(range(1, 33))
     for k_frames in range_k:
         conf['masking']['k_frames'] = k_frames
@@ -80,8 +88,7 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False):
                     predictions['model'] = y_pred_model
                 for pred_type, pred in predictions.items():
 
-                    # TODO: is not really the loss but the MSE
-                    loss = torch.nn.functional.mse_loss(pred, y)
+                    loss = loss_func(pred, y)
 
                     # update logs: loss value
                     loss_value = loss.cpu().detach().numpy()
@@ -128,7 +135,7 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False):
         plt.legend(['Mean of x', 'Last value of x'])
     plt.title('MSE Baseline Predictions (n={})'.format(conf['masking']['n_frames']))
     plt.xlabel('Number of masked frames k')
-    plt.ylabel('MSE')
+    plt.ylabel(loss_name)
     plt.grid()
     plt.tight_layout()
     plt.show()
@@ -140,7 +147,7 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False):
         plt.legend(['Mean minus model pred.', 'Last value minus model pred.', 'Model pred.'])
         plt.title('MSE Model vs. Baseline Comparison')
         plt.xlabel('Number of masked frames k')
-        plt.ylabel('MSE')
+        plt.ylabel(loss_name)
         plt.grid()
         plt.tight_layout()
         plt.show()
@@ -380,10 +387,10 @@ def evaluate(conf):
     model = get_model(conf, conf['device'])
     metrics = get_metrics(conf, conf['device'])
 
-    # calc_baseline(conf, compare_model=False, plot_best_results=True)
+    calc_baseline(conf, compare_model=False, plot_best_results=False)
 
     # plot_one_predicted_batch(conf, loader_test, model)
     # play_audio_files(conf, loader_test, model)
-    calc_metrics(conf, loader_test, model, metrics)
+    # calc_metrics(conf, loader_test, model, metrics)
 
     # play_audio_files(conf, loader_test, None, with_prediction=False)

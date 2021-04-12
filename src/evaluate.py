@@ -387,9 +387,9 @@ def evaluate(conf):
     model = get_model(conf, conf['device'])
     metrics = get_metrics(conf, conf['device'])
 
-    calc_baseline(conf, compare_model=False, plot_best_results=False)
+    # calc_baseline(conf, compare_model=False, plot_best_results=False)
 
-    # plot_one_predicted_batch(conf, loader_test, model)
+    plot_one_predicted_batch(conf, loader_test, model)
     # play_audio_files(conf, loader_test, model)
     # calc_metrics(conf, loader_test, model, metrics)
 

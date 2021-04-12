@@ -127,14 +127,27 @@ The loss must be small for two very similar predictions. In order that the netwo
 
 The table shows that the soft-DTW relaxes this problem a bit. However, neither this loss has yet brought a breakthrough and the predictions are still very poor (visually as well as acoustically), although the performance is better than the average value.
 
+Figure 8 shows a prediction of the U-Net++ on the training data. The original Spectrogram (upper left) was divided into a given segment (upper right) and a segment to predict (lower left). The prediction of the U-Net++ looks still different (lower right) compared to the ground truth.
+This is of course because the prediction is not complete accurate, but also due to the fact that spectrograms are converted to dB scale for plotting.
+However, the plot also indicated that the model is learning some features, this is for exampe visible by the high energy contribution to the lower frequencies.
+
+
+<p align="center">
+    <img src="assets/results/result_mfcc_soft-dtw.png" alt="MSE training set" width="70%" />
+    <br>
+    <i> Figure 8: The input, ground truth and predicted Mel-spectrogram of a U-Net++ using the Soft-DTW loss (converted to dB units).</i>
+</p>
+
+
+
 ##### U-Net++ vs. Transformer
-Another interesting comparison is the difference between the U-Net++ and a Transformer network. The Transformer network learns faster (i.e. training loss is reduced faster), but has a higher loss on the validation set as shown in figure 8.
+Another interesting comparison is the difference between the U-Net++ and a Transformer network. The Transformer network learns faster (i.e. training loss is reduced faster), but has a higher loss on the validation set as shown in figure 9.
 
 <p align="center">
     <img src="assets/results/MSE_train_tf-un.svg" alt="MSE training set" width="35%" />
     <img src="assets/results/MSE_test_tf-un.svg" alt="MSE validation set" width="35%" />
     <br>
-    <i> Figure 8: The plot on the left shows the training loss (i.e. MSE) and the plot on the right the loss on the validation set. The Transformer network has a much steeper learning curve but overfits more than the U-Net++.</i>
+    <i> Figure 9: The plot on the left shows the training loss (i.e. MSE) and the plot on the right the loss on the validation set. The Transformer network has a much steeper learning curve but overfits more than the U-Net++.</i>
 </p>
 
 

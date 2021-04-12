@@ -76,9 +76,9 @@ The plot indicates that this prediction was not good despite the low MSE. Instea
 > TODO: add plot / sound -> U-Net snowy-snow-17 on Training set
 
 <p align="center">
-      <img src="assets/results/speaker_comparison_male.png" alt="Mel-Spectrograms" width="70%" />
+      <img src="assets/results/todo_add_plot.png" alt="Predicted Mel-Spectrgramm" width="70%" />
       <br>
-      <i> Figure 7: Prediction of 8 frames of a Mel-Spectrogram, created with a U-Net++ on the training set</i>
+      <i> Figure 5: Prediction of 8 frames of a Mel-Spectrogram, created with a U-Net++ on the training set</i>
 </p>
 
 ##### Why it is Challenging
@@ -119,9 +119,9 @@ The 3rd column shows the loss for the figure 6, if the second Mel-specotrgram is
 
 | Loss 32 Frames | Loss Last Frame | Loss Average | Loss Diff. Fig. 6 | Loss Diff. Fig. 7 |
 |---------------|-----------------|--------------|-------------------|-------------------|
-| MSE           | $$ 1.451 $$ | $$ 0.708 $$ | $$0.3917$$ $$(55.32%)$$ | $$2.981$$ $$(421%)$$ | 
-| Soft-DTW $$\gamma=0.1$$ | $$5940$$ | $$2899$$ | $$1492.8$$ $$(51.49%)$$ | $$11269.1$$ $$(388.7%)$$  |
-| Soft-DTW $$\gamma=1.0$$ | $$5912$$ | $$2878$$ | $$1466.2$$ $$(50.91%)$$ | $$11294.1$$ $$(392.4%)$$ |
+| MSE           | $$ 1.451 $$ | $$ 0.708 $$ | $$0.3917$$ $$(55.32\%)$$ | $$2.981$$ $$(421\%)$$ | 
+| Soft-DTW $$\gamma=0.1$$ | $$5940$$ | $$2899$$ | $$1492.8$$ $$(51.49\%)$$ | $$11269.1$$ $$(388.7\%)$$  |
+| Soft-DTW $$\gamma=1.0$$ | $$5912$$ | $$2878$$ | $$1466.2$$ $$(50.91\%)$$ | $$11294.1$$ $$(392.4\%)$$ |
 
 The loss must be small for two very similar predictions. In order that the network cannot simply learn a simple baseline such as the average value, the loss must also be smaller than these baselines. This is the case for Figure 6: In the table, the brackets show how much larger the loss is compared to the better baseline. For Figure 7, however, this is far from being the case. This is considered as one of the difficulties of these predictions: If in this case the network only predicted the average, it would be much better. 
 

@@ -1,4 +1,4 @@
-use_wandb: True
+use_wandb: False
 
 # Environment
 env:
@@ -9,7 +9,7 @@ masking:
   position: end # end, beginning or center
   n_frames: 64 # max. number of input frames
   k_frames: 32 # number of frames to predict
-  window_shift: None # None = n_frames+k_frames
+  window_shift: 1 # None = n_frames+k_frames
   start_idx: sliding-window # beginning (first n+k frames affected per file), random (n+k frames at random position per file), sliding-window (first n+k frames, then shift by n+k -> multiple frames per file)
 
 # Dataset
@@ -24,11 +24,20 @@ model:
     n_heads: 8
     n_encoder_layers: 6
     n_decoder_layers: 6
+  unet:
+    encoder_name: efficientnet-b5
+    encoder_depth: 5
+    decoder_channels:
+      - 128
+      - 256
+      - 256
+      - 512
+      - 512
 
 
 # Training settings
 train:
-  loss: soft-dtw # either soft-dtw or mse
+  loss: mse # either soft-dtw or mse
   max_number_of_epochs: 500
   early_stopping: False
 

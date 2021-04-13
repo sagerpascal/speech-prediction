@@ -7,9 +7,9 @@ import torch.nn as nn
 class CustomUnet(smp.UnetPlusPlus):
     def __init__(self, conf):
         super().__init__(
-            encoder_name='efficientnet-b2',  # 'vgg11',
-            # encoder_depth=5,  # 5
-            # decoder_channels=[128, 256, 256, 512, 512], # reomve
+            encoder_name=conf['model']['unet']['encoder_name'],
+            encoder_depth=conf['model']['unet']['encoder_depth'],
+            decoder_channels=conf['model']['unet']['decoder_channels'],
             encoder_weights=None,
             in_channels=1,
             classes=1,

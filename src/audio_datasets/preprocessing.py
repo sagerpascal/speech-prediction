@@ -52,13 +52,14 @@ class Preprocess(nn.Module):
             # frames contains less frames than we want to predict -> set data and target to 0
             # data = torch.zeros((mfcc.shape[0], mfcc.shape[1], self.n_frames), dtype=torch.float)
             # target = torch.zeros((mfcc.shape[0], mfcc.shape[1], self.k_frames), dtype=torch.float)
-            logger.error("MFCC is smaller than frames we want to predict... ignored")
-            raise RuntimeError("MFCC too small!")
-            # return data, target
+            logger.error("Number of total frames is smaller than number of frames we want to predict...")
+            raise RuntimeError("Number of frames too small")
 
         elif frames.shape[2] < self.n_frames + self.k_frames:
-            logger.error("MFCC is smaller than n_frames+k_frames...")
-            return self.forward_action_to_small(frames)
+            logger.error("MFCC (length={}) is smaller than n_frames ({}) + k_frames ({}) ...".format(frames.shape[2],
+                                                                                                     self.n_frames,
+                                                                                                     self.k_frames))
+            return self.forward_action_too_small(frames)
 
         else:
             if self.start_idx == 'beginning' or self.start_idx == 'sliding-window' or frames.shape[
@@ -72,7 +73,7 @@ class Preprocess(nn.Module):
                 raise AttributeError("Unknown value set for parameter start_idx: {}".format(self.start_idx))
             return self.forward_action(frames, idx)
 
-    def forward_action_too_small(self, mfcc):
+    def forward_action_too_small(self, frames):
         pass
 
     def forward_action(self, frames, start_index):

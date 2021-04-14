@@ -1,4 +1,5 @@
 import platform
+import logging
 
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
@@ -8,6 +9,7 @@ from audio_datasets.dataset import AudioDataset
 from audio_datasets.dataset_h5 import AudioDatasetH5
 from audio_datasets.torch_speech_commands import SubsetSC
 
+logger = logging.getLogger(__name__)
 
 def _get_loader(conf, train_set, val_set, test_set, rank=None):
     if "cuda" in conf['device']:
@@ -85,6 +87,7 @@ def _get_dataset(conf, device, with_waveform):
         val_set = AudioDatasetH5(conf, mode='val', with_waveform=with_waveform)
         test_set = AudioDatasetH5(conf, mode='test', with_waveform=with_waveform)
     else:
+        logger.warn("Using slow dataset (single files instead of h5)")
         train_set = AudioDataset(conf, mode='train')
         val_set = AudioDataset(conf, mode='val')
         test_set = AudioDataset(conf, mode='test')

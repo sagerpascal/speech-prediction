@@ -5,11 +5,11 @@ import numpy as np
 import torch
 import librosa
 from dataloader import get_loaders
-from datasets.collate import collate_fn_debug
-from datasets.normalization import undo_zero_norm
+from audio_datasets.collate import collate_fn_debug
+from audio_datasets.normalization import undo_zero_norm
 from utils.conf_reader import get_config
 import torchaudio
-from datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform
+from audio_datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform
 from sklearn.metrics import mean_squared_error
 from losses.loss import SoftDTWWrapper
 

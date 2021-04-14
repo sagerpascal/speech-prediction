@@ -11,7 +11,7 @@ from utils.conf_reader import get_config
 import h5py
 from dataloader import get_loaders
 import copy
-from datasets.preprocessing import get_mfcc_transform
+from audio_datasets.preprocessing import get_mfcc_transform
 import torch
 import logging
 
@@ -118,8 +118,8 @@ def create_df_vox2():
     print("Total {}/{}".format(len(df_train) + len(df_val) + len(df_test), 2256492 / 2))
 
 
-def add_to_file(i, mfcc_start, mfcc, speaker, filename, mfcc_d, speaker_d, filepath_d, meta_d, n_features, vox2=True):
-    mfcc_end = mfcc_start + mfcc.shape[2]
+def add_to_file(i, mfcc_start, mfcc, speaker, filename, mfcc_d, speaker_d, filepath_d, meta_d, n_features, vox2=True, length_idx=2):
+    mfcc_end = mfcc_start + mfcc.shape[length_idx]
     mfcc_d.resize((1, n_features, mfcc_end))
     mfcc_d[:, :, mfcc_start:mfcc_end] = mfcc
     speaker_d[i, :] = speaker.encode("ascii")
@@ -176,7 +176,7 @@ def create_h5_file_timit():
     conf = get_config()
     assert conf['data']['dataset'] == 'timit'
 
-    df_base_path = Path('datasets/dfs')
+    df_base_path = Path('audio_datasets/dfs')
     train_fp = df_base_path / conf['data']['paths']['df']['train']
     val_fp = df_base_path / conf['data']['paths']['df']['val']
     test_fp = df_base_path / conf['data']['paths']['df']['test']
@@ -189,7 +189,7 @@ def create_h5_file_timit():
 
 def create_h5_file_vox2():
     conf = get_config()
-    df_base_path = Path('datasets/dfs')
+    df_base_path = Path('audio_datasets/dfs')
     train_df = pd.read_csv(df_base_path / conf['data']['paths']['df']['train'])
     valid_df = pd.read_csv(df_base_path / conf['data']['paths']['df']['val'])
     test_df = pd.read_csv(df_base_path / conf['data']['paths']['df']['test'])
@@ -322,7 +322,7 @@ def create_metadata_timit():
     conf = get_config()
     assert conf['data']['dataset'] == 'timit'
 
-    df_base_path = Path('datasets/dfs')
+    df_base_path = Path('audio_datasets/dfs')
     train_fp = df_base_path / conf['data']['paths']['df']['train']
     val_fp = df_base_path / conf['data']['paths']['df']['val']
     test_fp = df_base_path / conf['data']['paths']['df']['test']

@@ -7,13 +7,13 @@ import torchaudio
 from tqdm import tqdm
 import numpy as np
 
-from datasets.helper_mfcc import add_to_file
-from datasets.preprocessing import get_mel_spectro_transform
+from audio_datasets.helper_mfcc import add_to_file
+from audio_datasets.preprocessing import get_mel_spectro_transform
 from utils.conf_reader import get_config
 
 
 def create_h5_file_timit(conf, orig_fp, meta_fp, h5_name):
-    base_path = Path('datasets/dfs')
+    base_path = Path('audio_datasets/dfs')
     df = pd.read_csv(base_path / orig_fp)
     mel_spectro_transform = get_mel_spectro_transform(conf).to('cuda')
     number_of_entries = len(df)

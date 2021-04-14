@@ -15,8 +15,8 @@ from models.model import get_model
 from losses.loss import get_loss
 from utils.log import format_logs
 from utils.meter import AverageValueMeter
-from datasets.collate import collate_fn_debug
-from datasets.normalization import undo_zero_norm
+from audio_datasets.collate import collate_fn_debug
+from audio_datasets.normalization import undo_zero_norm
 
 
 # U-Net with Mel-Spectrogram

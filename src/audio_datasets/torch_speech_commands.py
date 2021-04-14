@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import torch
 import torchaudio
 from torchaudio.datasets import SPEECHCOMMANDS
-from datasets.preprocessing import get_mfcc_transform, get_frames_preprocess_fn
-from datasets.normalization import zero_norm
+from audio_datasets.preprocessing import get_mfcc_transform, get_frames_preprocess_fn
+from audio_datasets.normalization import zero_norm
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 class SubsetSC(SPEECHCOMMANDS):
     def __init__(self, conf, subset: str = None):
 
-        if os.path.exists("../datasets/"):
-            root = "../datasets/"
-        elif os.path.exists("datasets/"):
-            root = "datasets/"
+        if os.path.exists("/"):
+            root = "../audio_datasets/"
+        elif os.path.exists("audio_datasets/"):
+            root = "audio_datasets/"
         else:
-            root = "src/datasets/"
+            root = "src/audio_datasets/"
 
         super().__init__(root=root, download=True)
 

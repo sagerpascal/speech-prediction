@@ -3,10 +3,10 @@ import platform
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
-from datasets.collate import collate_fn
-from datasets.dataset import AudioDataset
-from datasets.dataset_h5 import AudioDatasetH5
-from datasets.torch_speech_commands import SubsetSC
+from audio_datasets.collate import collate_fn
+from audio_datasets.dataset import AudioDataset
+from audio_datasets.dataset_h5 import AudioDatasetH5
+from audio_datasets.torch_speech_commands import SubsetSC
 
 
 def _get_loader(conf, train_set, val_set, test_set, rank=None):

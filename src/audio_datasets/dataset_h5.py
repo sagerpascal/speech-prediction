@@ -8,8 +8,8 @@ import torch
 import torchaudio
 from torch.utils.data import Dataset
 
-from datasets.normalization import zero_norm, undo_zero_norm
-from datasets.preprocessing import get_frames_preprocess_fn
+from audio_datasets.normalization import zero_norm, undo_zero_norm
+from audio_datasets.preprocessing import get_frames_preprocess_fn
 from utils.conf_reader import get_config
 
 
@@ -18,7 +18,7 @@ class AudioDatasetH5(Dataset):
     def __init__(self, conf, mode, h5_base_path='/workspace/data_pa/', with_waveform=False):
 
         h5_base_path = Path(h5_base_path)
-        meta_base_path = Path('datasets/dfs')
+        meta_base_path = Path('audio_datasets/dfs')
 
         if mode == 'train':
             ds_fp = meta_base_path / conf['data']['paths']['df']['train']
@@ -50,17 +50,29 @@ class AudioDatasetH5(Dataset):
         self.metadata_df = pd.read_csv(md_fp)
 
         # std and mean from training set
-        if conf['data']['type'] == 'mfcc':
+        if conf['data']['type'] == 'raw':
+            self.mean = conf['data']['stats']['raw']['train']['mean']
+            self.std = conf['data']['stats']['raw']['train']['std']
+            self.length_key, self.start_key, self.end_key = 'raw_length', 'raw_start', 'raw_end'
+            self.file_key = 'RAW'
+            self.use_norm = False
+            self.shape_len = 2
+
+        elif conf['data']['type'] == 'mfcc':
             self.mean = conf['data']['stats']['mfcc']['train']['mean']
             self.std = conf['data']['stats']['mfcc']['train']['std']
             self.length_key, self.start_key, self.end_key = 'MFCC_length', 'MFCC_start', 'MFCC_end'
             self.file_key = 'MFCC'
+            self.use_norm = True
+            self.shape_len = 3
 
         elif conf['data']['type'] == 'mel-spectro':
             self.mean = conf['data']['stats']['mel-spectro']['train']['mean']
             self.std = conf['data']['stats']['mel-spectro']['train']['std']
             self.length_key, self.start_key = 'mel_spectro_length', 'mel_spectro_start'
             self.end_key, self.file_key = 'mel_spectro_end', 'Mel-Spectrogram'
+            self.use_norm = True
+            self.shape_len = 3
 
         self.preprocess = get_frames_preprocess_fn(mask_pos=conf['masking']['position'],
                                                    n_frames=conf['masking']['n_frames'],
@@ -121,8 +133,14 @@ class AudioDatasetH5(Dataset):
             waveform = None
 
         speaker = self.metadata_df['Speaker'][index_dataframe]
-        complete_data = self.h5_file[self.file_key][:, :, start_idx:end_idx]  # mfcc or mel-spectro
-        complete_data = zero_norm(complete_data, self.mean, self.std)
+
+        if self.shape_len == 2:
+            complete_data = self.h5_file[self.file_key][:, start_idx:end_idx]  # raw
+        elif self.shape_len == 3:
+            complete_data = self.h5_file[self.file_key][:, :, start_idx:end_idx]  # mfcc or mel-spectro
+
+        if self.use_norm:
+            complete_data = zero_norm(complete_data, self.mean, self.std)
 
         complete_data = torch.from_numpy(complete_data)
         data, target = self.preprocess(complete_data)

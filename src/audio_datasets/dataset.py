@@ -2,8 +2,8 @@ import pandas as pd
 from pathlib import Path
 import torchaudio
 from torch.utils.data import Dataset
-from datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform, get_frames_preprocess_fn
-from datasets.normalization import zero_norm
+from audio_datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform, get_frames_preprocess_fn
+from audio_datasets.normalization import zero_norm
 
 
 # http://www.openslr.org/12/
@@ -13,7 +13,7 @@ from datasets.normalization import zero_norm
 
 class AudioDataset(Dataset):
 
-    def __init__(self, conf, mode, df_base_path='datasets/dfs'):
+    def __init__(self, conf, mode, df_base_path='audio_datasets/dfs'):
 
         self.conf = conf
         df_base_path = Path(df_base_path)

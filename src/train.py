@@ -15,7 +15,7 @@ from utils.log import format_logs
 from utils.meter import AverageValueMeter
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
-from utils.ddp import setup
+from utils.ddp import setup, cleanup
 
 logger = logging.getLogger(__name__)
 
@@ -331,3 +331,5 @@ def train(rank=None, world_size=None, conf=None):
 
     if wandb_run is not None:
         wandb_run.finish()
+
+    cleanup()

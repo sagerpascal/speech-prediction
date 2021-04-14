@@ -50,7 +50,9 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_lo
     range_k = list(range(1, 33))
     for k_frames in range_k:
         conf['masking']['k_frames'] = k_frames
-        conf['masking']['window_shift'] = conf['masking']['n_frames'] + k_frames
+        # TODO: check if correct
+        if conf['masking']['window_shift']  is 'None':
+            conf['masking']['window_shift'] = conf['masking']['n_frames'] + k_frames
         conf['load_weights'] = 'exp21-n=60 k={} s=90'.format(k_frames)
         logs = {}
         loss_meters = {'{}'.format(l): AverageValueMeter() for l in ['mean', 'last']}

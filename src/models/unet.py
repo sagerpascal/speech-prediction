@@ -14,7 +14,7 @@ class CustomUnet(smp.UnetPlusPlus):
             in_channels=1,
             classes=1,
         )
-
+        self.segmentation_head = None # remove (not used)
         assert np.floor(np.log(conf['masking']['n_frames']) / np.log(2)) >= 5  # otherwise encoder is too deep
 
         self.conf = conf

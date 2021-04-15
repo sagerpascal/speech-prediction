@@ -29,16 +29,29 @@ class AudioDataset(Dataset):
 
         self.df = pd.read_csv(df_fp)
 
-        if conf['data']['type'] == 'mfcc':
+
+        if conf['data']['type'] == 'raw':
+            self.mean = conf['data']['stats']['raw']['train']['mean']
+            self.std = conf['data']['stats']['raw']['train']['std']
+            self.transform = None
+            self.length_key = 'raw_length'
+            self.use_norm = False
+            self.shape_len = 2
+
+        elif conf['data']['type'] == 'mfcc':
             self.mean = conf['data']['stats']['mfcc']['train']['mean']
             self.std = conf['data']['stats']['mfcc']['train']['std']
             self.transform = get_mfcc_transform(conf).to('cuda')
             self.length_key = 'MFCC_length'
+            self.use_norm = True
+            self.shape_len = 3
 
         elif conf['data']['type'] == 'mel-spectro':
             self.mean = conf['data']['stats']['mel-spectro']['train']['mean']
             self.std = conf['data']['stats']['mel-spectro']['train']['std']
             self.transform = get_mel_spectro_transform(conf).to('cuda')
+            self.use_norm = True
+            self.shape_len = 3
 
         self.preprocess = get_frames_preprocess_fn(mask_pos=conf['masking']['position'],
                                                    n_frames=conf['masking']['n_frames'],
@@ -61,8 +74,7 @@ class AudioDataset(Dataset):
             for index, row in self.df.iterrows():
                 length, start = row[self.length_key], 0
 
-                while self.window_shift <= length:
-                    assert start + self.window_shift <= length
+                while self.n_frames + self.k_frames <= length:
                     self.sliding_window_indexes[item_count] = [index, start, start + self.n_frames + self.k_frames]
                     start += self.window_shift
                     length -= self.window_shift
@@ -88,8 +100,15 @@ class AudioDataset(Dataset):
         if self.sliding_window:
             complete_data = complete_data[:, :, start_idx:end_idx]
 
-        complete_data = zero_norm(complete_data, self.mean, self.std)  # normalize
-        data, target = self.preprocess(complete_data)
+        if self.use_norm:
+            complete_data = zero_norm(complete_data, self.mean, self.std)  # normalize
+
+        if self.shape_len == 2:
+            data, target = self.preprocess(complete_data.unsqueeze(0))
+            data = data.squeeze(0)
+            target = target.squeeze(0)
+        else:
+            data, target = self.preprocess(complete_data)
 
         return data, target, complete_data, waveform[0], speaker
 

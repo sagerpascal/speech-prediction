@@ -51,6 +51,7 @@ def create_h5_file_timit(orig_fp, meta_fp, h5_name):
                               dataset, speaker_dataset, filepath_dataset,
                               meta_dataset)
 
+        assert raw_end - raw_start == signal.shape[1]
         raw_ends.append(raw_end)
         raw_start = raw_end
 

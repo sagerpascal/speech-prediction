@@ -22,7 +22,10 @@ class AudioDatasetH5(Dataset):
 
         if mode == 'train':
             ds_fp = meta_base_path / conf['data']['paths']['df']['train']
-            if conf['data']['type'] == 'mfcc':
+            if conf['data']['type'] == 'raw':
+                h5_fp = h5_base_path / conf['data']['paths']['raw']['h5']['train']
+                md_fp = meta_base_path / conf['data']['paths']['raw']['h5']['metadata']['train']
+            elif conf['data']['type'] == 'mfcc':
                 h5_fp = h5_base_path / conf['data']['paths']['mfcc']['h5']['train']
                 md_fp = meta_base_path / conf['data']['paths']['mfcc']['h5']['metadata']['train']
             elif conf['data']['type'] == 'mel-spectro':
@@ -30,7 +33,10 @@ class AudioDatasetH5(Dataset):
                 md_fp = meta_base_path / conf['data']['paths']['mel-spectro']['h5']['metadata']['train']
         elif mode == 'val':
             ds_fp = meta_base_path / conf['data']['paths']['df']['val']
-            if conf['data']['type'] == 'mfcc':
+            if conf['data']['type'] == 'raw':
+                h5_fp = h5_base_path / conf['data']['paths']['raw']['h5']['val']
+                md_fp = meta_base_path / conf['data']['paths']['raw']['h5']['metadata']['val']
+            elif conf['data']['type'] == 'mfcc':
                 h5_fp = h5_base_path / conf['data']['paths']['mfcc']['h5']['val']
                 md_fp = meta_base_path / conf['data']['paths']['mfcc']['h5']['metadata']['val']
             elif conf['data']['type'] == 'mel-spectro':
@@ -38,7 +44,10 @@ class AudioDatasetH5(Dataset):
                 md_fp = meta_base_path / conf['data']['paths']['mel-spectro']['h5']['metadata']['val']
         elif mode == 'test':
             ds_fp = meta_base_path / conf['data']['paths']['df']['test']
-            if conf['data']['type'] == 'mfcc':
+            if conf['data']['type'] == 'raw':
+                h5_fp = h5_base_path / conf['data']['paths']['raw']['h5']['test']
+                md_fp = meta_base_path / conf['data']['paths']['raw']['h5']['metadata']['test']
+            elif conf['data']['type'] == 'mfcc':
                 h5_fp = h5_base_path / conf['data']['paths']['mfcc']['h5']['test']
                 md_fp = meta_base_path / conf['data']['paths']['mfcc']['h5']['metadata']['test']
             elif conf['data']['type'] == 'mel-spectro':
@@ -104,8 +113,8 @@ class AudioDatasetH5(Dataset):
             for index, row in self.metadata_df.iterrows():
                 length, start, end = row[self.length_key], row[self.start_key], row[self.end_key]
 
-                while self.window_shift <= length:
-                    assert start + self.window_shift <= end
+                while self.n_frames + self.k_frames <= length:
+                    assert start + self.n_frames + self.k_frames <= end
                     self.sliding_window_indexes[item_count] = [index, start, start + self.n_frames + self.k_frames]
                     start += self.window_shift
                     length -= self.window_shift
@@ -134,6 +143,10 @@ class AudioDatasetH5(Dataset):
 
         speaker = self.metadata_df['Speaker'][index_dataframe]
 
+        start_seq, end_seq = self.h5_file['META'][index_dataframe]
+        assert start_idx >= start_seq and start_idx <= end_seq
+        assert end_idx >= start_seq and end_idx <= end_seq
+
         if self.shape_len == 2:
             complete_data = self.h5_file[self.file_key][:, start_idx:end_idx]  # raw
         elif self.shape_len == 3:
@@ -143,9 +156,15 @@ class AudioDatasetH5(Dataset):
             complete_data = zero_norm(complete_data, self.mean, self.std)
 
         complete_data = torch.from_numpy(complete_data)
-        data, target = self.preprocess(complete_data)
 
-        return data, target, complete_data, waveform, speaker
+        if self.shape_len == 2:
+            data, target = self.preprocess(complete_data.unsqueeze(0))
+            data = data.squeeze(0)
+            target = target.squeeze(0)
+        else:
+            data, target = self.preprocess(complete_data)
+
+        return data, target, complete_data, waveform, speaker, start_idx, end_idx, self.dataset_df['file_path'][index_dataframe], index_dataframe
 
     def __len__(self):
         return self.dataset_length
@@ -154,41 +173,56 @@ class AudioDatasetH5(Dataset):
     #     self.h5_file.close()
 
 
-def play_some_data():
+def play_some_data(type='mfcc'):
     import random
     import scipy.io.wavfile
-    from librosa.feature.inverse import mfcc_to_audio
+    from librosa.feature.inverse import mfcc_to_audio, mel_to_audio
 
     conf = get_config()
-    dataset = AudioDatasetH5(conf, 'train', with_waveform=False)
-    mean, std = conf['data']['stats']['mfcc']['train']['mean'], conf['data']['stats']['mfcc']['train']['std']
+    dataset = AudioDatasetH5(conf, 'train', with_waveform=True)
+
+    if type == 'mfcc':
+        mean, std = conf['data']['stats']['mfcc']['train']['mean'], conf['data']['stats']['mfcc']['train']['std']
+        to_audio = mfcc_to_audio
+    elif type == 'mel-spectro':
+        mean, std = conf['data']['stats']['mfcc']['train']['mean'], conf['data']['stats']['mfcc']['train']['std']
+        to_audio = mel_to_audio
 
     for i in range(3):
         idx = random.randint(0, len(dataset))
 
-        for j in range(2):
+        for j in range(20):
             # two following segments
-            data, target, mfcc, waveform, *_ = dataset[idx + j]
+            data, target, mfcc, waveform, speaker, start, stop, path, idx2 = dataset[idx + j]
 
             data = data.squeeze(dim=0).cpu().numpy()
             target = target.squeeze(dim=0).cpu().numpy()
             mfcc = mfcc.squeeze(dim=0).cpu().numpy()
 
-            mfcc = undo_zero_norm(mfcc, mean, std)
-            data = undo_zero_norm(data, mean, std)
-            target = undo_zero_norm(target, mean, std)
+            if type == 'mfcc' or type == 'mel-spectro':
+                mfcc = undo_zero_norm(mfcc, mean, std)
+                data = undo_zero_norm(data, mean, std)
+                target = undo_zero_norm(target, mean, std)
+                mfcc_audio = to_audio(mfcc, hop_length=conf['data']['transform']['hop_length'])
+                data_audio = to_audio(data, hop_length=conf['data']['transform']['hop_length'])
+                target_audio = to_audio(target, hop_length=conf['data']['transform']['hop_length'])
+            else:
+                mfcc_audio = mfcc.T
+                data_audio = data.T
+                target_audio = target.T
 
-            print("{}".format(waveform))
-            # scipy.io.wavfile.write('testfiles_dataset/waveform_{}-{}.wav'.format(i, j), conf['data']['transform']['sample_rate'], waveform.T)
+            print("{}".format(path))
+            scipy.io.wavfile.write('testfiles_dataset/waveform_{}-{}.wav'.format(i, j),
+                                   conf['data']['transform']['sample_rate'], waveform.cpu().numpy().T)
             scipy.io.wavfile.write('testfiles_dataset/MFCC_{}-{}.wav'.format(i, j),
                                    conf['data']['transform']['sample_rate'],
-                                   mfcc_to_audio(mfcc, hop_length=conf['data']['transform']['hop_length']))
+                                   mfcc_audio)
             scipy.io.wavfile.write('testfiles_dataset/data_{}-{}.wav'.format(i, j),
                                    conf['data']['transform']['sample_rate'],
-                                   mfcc_to_audio(data, hop_length=conf['data']['transform']['hop_length']))
+                                   data_audio)
             scipy.io.wavfile.write('testfiles_dataset/target_{}-{}.wav'.format(i, j),
                                    conf['data']['transform']['sample_rate'],
-                                   mfcc_to_audio(target, hop_length=conf['data']['transform']['hop_length']))
+                                   target_audio)
 
 
 def test_sliding_window():
@@ -239,5 +273,5 @@ def test_sliding_window():
 
 if __name__ == '__main__':
     os.chdir('../')
-    test_sliding_window()
-    play_some_data()
+    # test_sliding_window()
+    play_some_data(type='raw')

@@ -73,7 +73,7 @@ learning.
 - Encode the underlying shared information between different parts of the (high-dimensional) signal, discard low-level information and noise that is more local
 - Learn representations by predicting the future in latent space by using autoregressive models
   - First, an encoder maps the input sequence $$x_t$$ to latent representations $$z_t$$ with a lower temporal resolution, next an autoregressive model summarizes multiple latent representations $$z_{\leq t}$$ in a context latent representation $$c_t$$
-  - Do not predict future observations with a generative model $$p(x_{t+k}|c_{t})$$ but model a density ratio which preserves the mutual information between $$x_{t+k}$$ and $$c_t$$: $$\frac{p(x_{t+k}|c_{t})}{p(x_{t+k}}$$ 
+  - Do not predict future observations with a generative model $$p(x_{t+k} \rvert c_{t})$$ but model a density ratio which preserves the mutual information between $$x_{t+k}$$ and $$c_t$$: $$\frac{p(x_{t+k} \rvert c_{t})}{p(x_{t+k}}$$ 
 
 > One of the challenges of predicting high-dimensional data is that unimodal losses such as meansquared error and cross-entropy are not very useful, and powerful conditional generative models which
 need to reconstruct every detail in the data are usually required. But these models are computationally

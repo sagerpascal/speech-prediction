@@ -81,7 +81,8 @@ def _get_torch_speech_commands(conf, device):
 
 
 def _get_dataset(conf, device, with_waveform):
-    if conf['data']['type'] == 'mfcc' and conf['data'].get('paths').get('mfcc').get('h5') is not None or \
+    if conf['data']['type'] == 'raw' and conf['data'].get('paths').get('raw').get('h5') is not None or \
+            conf['data']['type'] == 'mfcc' and conf['data'].get('paths').get('mfcc').get('h5') is not None or \
             conf['data']['type'] == 'mel-spectro' and conf['data'].get('paths').get('mel-spectro').get('h5') is not None:
         train_set = AudioDatasetH5(conf, mode='train', with_waveform=with_waveform)
         val_set = AudioDatasetH5(conf, mode='val', with_waveform=with_waveform)

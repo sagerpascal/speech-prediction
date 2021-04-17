@@ -1,11 +1,18 @@
-import torch
 import logging
+
+import torch
 
 logger = logging.getLogger(__name__)
 
 
-def pad_mfcc(batch):
+def pad_mfcc_3d(batch):
     batch = [item.squeeze(dim=0).permute(1, 0) for item in batch]
+    batch = torch.nn.utils.rnn.pad_sequence(batch, batch_first=True, padding_value=0.)
+    return batch
+
+
+def pad_mfcc_2d(batch):
+    batch = [item.squeeze(dim=0) for item in batch]
     batch = torch.nn.utils.rnn.pad_sequence(batch, batch_first=True, padding_value=0.)
     return batch
 
@@ -21,8 +28,12 @@ def collate_fn(batch):
         data_b.append(data)
         target_b.append(target)
 
-    data_b = pad_mfcc(data_b)
-    target_b = pad_mfcc(target_b)
+    if len(data_b[0].shape) == 2:
+        data_b = pad_mfcc_2d(data_b)
+        target_b = pad_mfcc_2d(target_b)
+    else:
+        data_b = pad_mfcc_3d(data_b)
+        target_b = pad_mfcc_3d(target_b)
 
     return data_b, target_b
 
@@ -35,9 +46,13 @@ def collate_fn_debug(batch):
         mfcc_b.append(mfcc)
         waveform_b.append(waveform)
 
-    data_b = pad_mfcc(data_b)
-    target_b = pad_mfcc(target_b)
-    mfcc_b = pad_mfcc(mfcc_b)
+    if len(data_b[0].shape) == 2:
+        data_b = pad_mfcc_2d(data_b)
+        target_b = pad_mfcc_2d(target_b)
+        mfcc_b = pad_mfcc_2d(mfcc_b)
+    else:
+        data_b = pad_mfcc_3d(data_b)
+        target_b = pad_mfcc_3d(target_b)
+        mfcc_b = pad_mfcc_3d(mfcc_b)
 
     return data_b, target_b, mfcc_b, waveform_b
-

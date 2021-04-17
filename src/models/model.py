@@ -5,7 +5,6 @@ import torch
 from models.transformer import CustomTransformer
 from models.unet import CustomUnet
 from models.simple_cnn import SimpleCNN
-# from torchsummary import summary
 
 # mit TIMIT: https://github.com/hirofumi0810/neural_sp
 # mit TIMIT: https://github.com/okkteam/Transformer-Transducer

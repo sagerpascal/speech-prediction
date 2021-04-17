@@ -7,7 +7,7 @@ import pandas as pd
 import torch
 import torchaudio
 from torch.utils.data import Dataset
-
+from audio_datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform
 from audio_datasets.normalization import zero_norm, undo_zero_norm
 from audio_datasets.preprocessing import get_frames_preprocess_fn
 from utils.conf_reader import get_config
@@ -66,6 +66,7 @@ class AudioDatasetH5(Dataset):
             self.file_key = 'RAW'
             self.use_norm = False
             self.shape_len = 2
+            self.transform = get_mel_spectro_transform(conf)
 
         elif conf['data']['type'] == 'mfcc':
             self.mean = conf['data']['stats']['mfcc']['train']['mean']
@@ -161,10 +162,13 @@ class AudioDatasetH5(Dataset):
             data, target = self.preprocess(complete_data.unsqueeze(0))
             data = data.squeeze(0)
             target = target.squeeze(0)
+            target = self.transform(target)  # TODO cleanup
+
+
         else:
             data, target = self.preprocess(complete_data)
 
-        return data, target, complete_data, waveform, speaker, start_idx, end_idx, self.dataset_df['file_path'][index_dataframe], index_dataframe
+        return data, target, complete_data, waveform, speaker # , start_idx, end_idx, self.dataset_df['file_path'][index_dataframe], index_dataframe
 
     def __len__(self):
         return self.dataset_length

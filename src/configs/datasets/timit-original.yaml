@@ -5,6 +5,15 @@ paths:
     train: timit-orig-train.csv
     val: timit-orig-val.csv
     test: timit-orig-test.csv
+  raw:
+    h5:
+      train: TIMIT/timit_raw_train.h5
+      val: TIMIT/timit_raw_valid.h5
+      test: TIMIT/timit_raw_test.h5
+      metadata:
+        train: timit_raw_metadata_train.csv
+        val: timit_raw_metadata_valid.csv
+        test: timit_raw_metadata_test.csv
   mfcc:
     h5:
       train: TIMIT/timit_mfcc_train.h5
@@ -25,6 +34,10 @@ paths:
         test: timit_mel_spectro_metadata_test.csv
 
 stats:
+  raw:
+    train:
+      mean: 0.00000020026256208893756
+      std: 0.004097380209714174
   mfcc:
     train:
       mean: -14.926456

@@ -95,10 +95,16 @@ class AudioDataset(Dataset):
 
         waveform = torchaudio.load(self.df['file_path'][index_dataframe])
         speaker = self.df['speaker'][index_dataframe]
+        complete_data = waveform[0]
 
-        complete_data = self.transform(waveform[0])  # either mfcc or mel-spectrogram
+        if self.transform is not None:
+            complete_data = self.transform(complete_data)  # either mfcc or mel-spectrogram
+
         if self.sliding_window:
-            complete_data = complete_data[:, :, start_idx:end_idx]
+            if self.shape_len == 2:
+                complete_data = complete_data[:, start_idx:end_idx]
+            elif self.shape_len == 3:
+                complete_data = complete_data[:, :, start_idx:end_idx]
 
         if self.use_norm:
             complete_data = zero_norm(complete_data, self.mean, self.std)  # normalize

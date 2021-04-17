@@ -6,10 +6,30 @@ nav_order: 4
 
 # Self-Supervised Approaches
 
-## Notes
-- Reduce features by using a pre- and post-processing network (map to embedding)
-- Use a huge dataset for pretraining (e.g. Librispeech)
-- USE MAE instead of MSE
+## Ideas and Findings
+
+Data set:
+- State-of-the-art self-supervised approaches are mostly trained on Libri-Speech. This dataset contains approx. 960h of audio data.
+- The TIMIT dataset is much smaller (approx. 6h) and could therefore be used for fine-tuning only
+- A challenge will be the training time: E.g. wav2vec 2.0 used 128 V100 GPU's for pretraining and this setup still took more than 7 days.
+  - It could be beneficial to look for a pretrained model
+
+Input signal:
+- Many state-of-the-art approaches uses the raw signal as input and then apply a CNN to extract representational features. They show that these feature vectors achieve better results on most downstream tasks than Mel-spectrograms or MFCCs.
+  However, the goal of this project thesis is to predict speech. Therefore, it makes sense to use the same kind of signal as input and as output. The raw signal is considered as to noisy and therefore it is recommended to use Mel-spectrograms or MFCCs
+- The Mel-spectrograms or MFCCs could still be fed into an CNN to extract more task specific features
+
+Architecture:
+- CNN pre-net to extract the needed features to predict future sequences
+- RNN model to predict the Mel-spectrogram or MFCC
+- CNN post-net to smooth the predicted Mel-spectrogram or MFCC
+
+Loss:
+- Try L1 loss instead of l2 loss as done for speech synthesis
+
+Training ideas:
+- Contrastive pretraining of the pre-net: Use a given sequence and the following sequence as positive example, use a given sequence and some random sequences as negative example
+- Train end-to-end
 
 
 ###### Word2Vec
@@ -197,4 +217,18 @@ and an inventory of discretized speech units.
 - wav2vec 2.0 masks the speech input in the latent space and solves a contrastive task defined over a quantization of the latent representations which are jointly learned.
   - Input raw audio data in encoder (CNN) and then masks spans of the resulting latent speech representations.  The latent representations are fed to a Transformer network to build contextualized representations and the model is trained via a contrastive task where the true latent is to be distinguished
 from distractors
-  - Main difference to vq-wav2vec: Train End-to-End with one network  
+  - Main difference to vq-wav2vec: Train End-to-End with one network
+  
+###### Speech Synthesis
+*Source: Wang et al., "Tacotron: Towards End-to-End Speech Synthesis", 2017* and *Chung et al., "Semi-Supervised Training for Improving Data Efficiency in End-to-End Speech Synthesis", ICASSP, 2019*
+
+<p align="center">
+      <img src="assets/self_supervised/tactron.png" alt="Tactron architecture" width="70%" />
+      <br>
+      <i>Tactron model architecture. The model takes characters as input and outputs the corresponding raw spectrogram, which is then fed to the Griffin-Lim reconstruction algorithm to synthesize speech.</i>
+</p>
+
+- Tacotron: Takes characters as input and outputs raw spectrogram frames, which are then converted to waveforms
+  - The backbone of Tacotron is a modified seq2seq model with attention. The model consists of an encoder, an attention-based decoder, and a post-processing net.
+  - The goal of the encoder is to extract robust sequential representations of text.
+- Both approaches used L1-Loss

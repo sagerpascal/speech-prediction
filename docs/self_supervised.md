@@ -17,20 +17,25 @@ Data set:
 Input signal:
 - Many state-of-the-art approaches uses the raw signal as input and then apply a CNN to extract representational features. They show that these feature vectors achieve better results on most downstream tasks than Mel-spectrograms or MFCCs.
   However, the goal of this project thesis is to predict speech. Therefore, it makes sense to use the same kind of signal as input and as output. The raw signal is considered as to noisy and therefore it is recommended to use Mel-spectrograms or MFCCs
+  - Try to compress high-dimensional data into a much more compact latent embedding as done in CPC but do not remove necessary information for prediction (e.g. remove lokal noise but not more global noise)
 - The Mel-spectrograms or MFCCs could still be fed into an CNN to extract more task specific features
 
 Architecture:
 - CNN pre-net to extract the needed features to predict future sequences
 - RNN model to predict the Mel-spectrogram or MFCC
 - CNN post-net to smooth the predicted Mel-spectrogram or MFCC
+- Should be fast in order to use a lot of data
 
 Loss:
-- Try L1 loss instead of l2 loss as done for speech synthesis
+- Try L1 loss instead of L2 loss as done for speech synthesis
+- Weight loss depending on the distance as done for continous skip-gram
 
 Training ideas:
 - Contrastive pretraining of the pre-net: Use a given sequence and the following sequence as positive example, use a given sequence and some random sequences as negative example
-- Train end-to-end
-
+  - Does this preserve enough information to reconstruct signal?
+- Train end-to-end as done at the moment but use other architecture and different loss 
+- Two steps: Instead of predicting directly Mel-spectrogram predict a simpler embedding which can reconstruct the spectrogram (combine CPC with some generic approach)
+- Train an autoencoder first, then use the encoder to encode the given data and the target and learn to predict the encoded data, afterwards use the decoder to reconstruct the predicted encoded data
 
 ###### Word2Vec
 

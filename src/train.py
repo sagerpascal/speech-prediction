@@ -13,6 +13,7 @@ from models.model import get_model
 from optimizer import get_optimizer, get_lr
 from utils.log import format_logs
 from utils.meter import AverageValueMeter
+from torch.nn.utils import clip_grad_norm
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
 from utils.ddp import setup, cleanup
@@ -99,6 +100,8 @@ class TrainEpoch(Epoch):
             verbose=verbose,
         )
         self.optimizer = optimizer
+        self.use_grad_clip_norm = conf['train']['gradient_clipping']['use_grad_clip']
+        self.grad_clip_threshold = conf['train']['gradient_clipping']['grad_clip_threshold']
 
     def on_epoch_start(self):
         self.model.train()
@@ -108,6 +111,8 @@ class TrainEpoch(Epoch):
         output = self.model.forward(x, y)
         loss = self.loss(output, y)
         loss.backward()
+        if self.use_grad_clip_norm:
+            grad_norm = clip_grad_norm(self.model.parameters(), self.grad_clip_threshold)
         self.optimizer.step()
         return loss, output
 

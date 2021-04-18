@@ -43,6 +43,7 @@ def _get_loader(conf, train_set, val_set, test_set, rank=None):
         train_set,
         batch_size=conf['train']['batch_size'],
         shuffle=train_loader_shuffle,
+        drop_last=False,
         collate_fn=collate_fn,
         num_workers=num_workers,
         pin_memory=pin_memory,

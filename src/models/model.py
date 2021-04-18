@@ -5,6 +5,7 @@ import torch
 from models.transformer import CustomTransformer
 from models.unet import CustomUnet
 from models.simple_cnn import SimpleCNN
+from models.apc import APCModel
 
 # mit TIMIT: https://github.com/hirofumi0810/neural_sp
 # mit TIMIT: https://github.com/okkteam/Transformer-Transducer
@@ -31,6 +32,8 @@ def get_model(conf, device):
         model = CustomUnet(conf)
     elif conf['model']['type'] == 'cnn':
         model = SimpleCNN(conf)
+    elif conf['model']['type'] == 'apc':
+        model = APCModel(conf)
     else:
         raise AttributeError("Unknown Model in config file: {}".format(conf['model']['type']))
 

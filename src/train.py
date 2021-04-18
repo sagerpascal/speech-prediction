@@ -109,6 +109,8 @@ class TrainEpoch(Epoch):
     def batch_update(self, x, y):
         self.optimizer.zero_grad()
         output = self.model.forward(x, y)
+        if isinstance(output, tuple):
+            output = output[0]
         loss = self.loss(output, y)
         loss.backward()
         if self.use_grad_clip_norm:
@@ -137,6 +139,8 @@ class ValidEpoch(Epoch):
             # https://datascience.stackexchange.com/questions/81727/what-would-be-the-target-input-for-transformer-decoder-during-test-phase
             # output = self.model.forward(x, y)
             output = self.model.predict(x)
+            if isinstance(output, tuple):
+                output = output[0]
             loss = self.loss(output, y)
         return loss, output
 

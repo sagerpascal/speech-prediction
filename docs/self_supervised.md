@@ -19,10 +19,11 @@ nav_order: 4
   However, the goal of this project thesis is to predict speech. Therefore, it makes sense to use the same kind of signal as input and as output. The raw signal is considered as to noisy and therefore it is recommended to use Mel-spectrograms or MFCCs
   - Try to compress high-dimensional data into a much more compact latent embedding as done in CPC but do not remove necessary information for prediction (e.g. remove lokal noise but not more global noise)
 - The Mel-spectrograms or MFCCs could still be fed into an CNN to extract more task specific features
+- Use log Mel-spectrograms instead of Mel-spectrograms
 
 **Architecture:**
 - CNN pre-net to extract the needed features to predict future sequences
-- RNN model to predict the Mel-spectrogram or MFCC
+- RNN (GRU) model to predict the Mel-spectrogram or MFCC
 - CNN post-net to smooth the predicted Mel-spectrogram or MFCC
 - Should be fast in order to use a lot of data
 
@@ -30,14 +31,26 @@ nav_order: 4
 - Try L1 loss instead of L2 loss as done for speech synthesis
 - Weight loss depending on the distance as done for continous skip-gram
 
-Training ideas:
+**Training ideas:**
 - Contrastive pretraining of the pre-net: Use a given sequence and the following sequence as positive example, use a given sequence and some random sequences as negative example
   - Does this preserve enough information to reconstruct signal?
 - Train end-to-end as done at the moment but use other architecture and different loss 
 - Two steps: Instead of predicting directly Mel-spectrogram predict a simpler embedding which can reconstruct the spectrogram (combine CPC with some generic approach)
 - Train an autoencoder first, then use the encoder to encode the given data and the target and learn to predict the encoded data, afterwards use the decoder to reconstruct the predicted encoded data
 
-## Word2Vec
+
+Models in natural language processing are pretrained in several different ways. For example, autoencoding models are 
+pretrained by corrupting the input tokens and trying to reconstruct the original sentence. However, predicting the 
+next frame of speech is closely related to autoregressive models in NLP: Autoregressive models are pretraind by guessing the next token having read all the previous ones.
+Although autoregressive models can be fine-tuned for many tasks, the most common application is text generation.
+State-of-the-art models like GPT v1-v3 or Transformer-XL use therefore the decoder of the original Transformer. 
+The decoder implements a masking so that the attention heads can only see what was before in the text, and not what’s after.
+**Therefore, the proposed RNN could be replaced by a Transformer decoder.** 
+
+
+## Relevant Papers
+
+### Word2Vec
 
 *Source: Mikolov et al., "Efficient Estimation of Word Representations in Vector Space", 2013, ICLR*
 
@@ -53,7 +66,7 @@ Take-aways:
 - Simpler architecture (faster training) but more data
 - Weight loss by distance (smaller loss if frame is further away)
 
-## Time Contrastive Learning
+### Time Contrastive Learning
 *Sources: Sermanet et al, "Time-contrastive networks: Self-supervised learning from multi-view observation", 2017, CVPRW* and *Hyvarinen and Morioka, "Unsupervised feature extraction by time-contrastive learning and nonlinear", 2016, NIPS*
 
 
@@ -70,7 +83,7 @@ Take-aways:
 - Contrastive loss by using feature vectors which are close together on the time axis as positive sample and vectors which are further apart as negative examples
 
 
-## Contrastive Predictive Coding (CPC)
+### Contrastive Predictive Coding (CPC)
 
 *Source: van den Oord et al., "Representation Learning with Contrastive Predictive Coding", 2018*
 
@@ -114,7 +127,7 @@ Take-Away:
 - Predicting "original" data is difficult, it is much easier to predict an embedding vector
 - Two steps: Map input into latent space and then apply autoregressive model
 
-## Autoregressive Predictive Coding (APC)
+### Autoregressive Predictive Coding (APC)
 
 *Source: Chung et al, "An Unsupervised Autoregressive Model for Speech Representation Learning", 2019* and *Chung et al., "Generative Pre-Training for Speech with Autoregressive Predictive Coding", 2020*
 
@@ -134,7 +147,7 @@ Take-away
 - Use large dataset for pretraining
 
 
-## Learning Speaker Representations with Mutual Information
+### Learning Speaker Representations with Mutual Information
 
 *Source: Ravanelli and Bengio, "Learning Speaker Representations with Mutual Information", 2018*
 
@@ -158,7 +171,7 @@ Take-away
 
 
 
-## wav2vec: Unsupervised Pre-Training for Speech Recognition
+### wav2vec: Unsupervised Pre-Training for Speech Recognition
 
 <p align="center">
       <img src="assets/self_supervised/wav2vec.png" alt="wav2vec architecture" width="70%" />
@@ -185,7 +198,7 @@ density ratio $$p(z_{i+k}|z_{i} ... z_{i−r})/p(z_{i+k})$$ similar to [Represen
 *k: number of steps in the future*
 
 
-## wav2vec with Quantization
+### wav2vec with Quantization
 
 *Source: Baevski et al., "vq-wav2vec: Self-Supervised Learning of Discrete Speech Representations". 2019* and *Source: Baevski and Mohamed, "Effectiveness of Self-Supervised Pre-Training for ASR", 2020, ICASSP*
 
@@ -206,7 +219,7 @@ acoustic model to output transcriptions.
   - More accurate with quantization module
 - Fine-tune the pre-trained BERT models on transcribed speech using a Connectionist Temporal Classification (CTC) loss instead of feeding the representations into a task-specific model
 
-## wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations
+### wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations
 
 *Source: Baevski et al., "wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations", 2020*
 
@@ -224,7 +237,7 @@ and an inventory of discretized speech units.
 from distractors
   - Main difference to vq-wav2vec: Train End-to-End with one network
   
-## Speech Synthesis
+### Speech Synthesis
 *Source: Wang et al., "Tacotron: Towards End-to-End Speech Synthesis", 2017* and *Chung et al., "Semi-Supervised Training for Improving Data Efficiency in End-to-End Speech Synthesis", ICASSP, 2019*
 
 <p align="center">

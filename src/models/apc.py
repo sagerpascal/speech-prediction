@@ -41,13 +41,13 @@ class Postnet(nn.Module):
     def __init__(self, input_size, output_size):
         super(Postnet, self).__init__()
         # TODO: cleanup
-        self.layer_seq_len = nn.Conv1d(in_channels=64, out_channels=32, kernel_size=1, stride=1)
+        self.layer_seq_len = nn.Linear(in_features=60, out_features=30)
         self.layer_dim = nn.Conv1d(in_channels=input_size, out_channels=output_size, kernel_size=1, stride=1)
 
     def forward(self, inputs):
         # inputs: (batch_size, seq_len, hidden_size)
-        inputs = self.layer_seq_len(inputs)
         inputs = torch.transpose(inputs, 1, 2)
+        inputs = self.layer_seq_len(inputs)
         # inputs: (batch_size, hidden_size, seq_len) -- for conv1d operation
 
         outputs = torch.transpose(self.layer_dim(inputs), 1, 2)
@@ -123,7 +123,6 @@ class APCModel(nn.Module):
         # currently, only fix lengths are used
         seq_lengths = torch.IntTensor(inputs.shape[0] * [self.conf['masking']['n_frames']])
 
-
         if self.prenet is not None:
             rnn_inputs = self.prenet(inputs)
             # rnn_inputs: (batch_size, seq_len, rnn_input_size)
@@ -165,8 +164,7 @@ class APCModel(nn.Module):
         predicted_mel = self.postnet(rnn_outputs)
         # predicted_mel: (batch_size, seq_len, mel_dim)
 
-        internal_reps = torch.stack(internal_reps)
-
+        internal_reps = None# TODO internal_reps = torch.stack(internal_reps)
         return predicted_mel, internal_reps
         # predicted_mel is only for training; internal_reps is the extracted
         # features

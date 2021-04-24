@@ -1,4 +1,4 @@
-use_wandb: True
+use_wandb: False
 
 # Environment
 env:
@@ -15,7 +15,7 @@ masking:
 # Dataset
 data:
   type: mel-spectro # raw, mel-spectro or mfcc
-  config_file: datasets/timit-original.yaml
+  config_file: datasets/libri-speech.yaml
 
 # Model settings
 model:
@@ -36,24 +36,25 @@ model:
   apc:
     prenet:
       use_prenet: True
-      num_layers: 5
+      num_layers: 6
       hidden_size: 512
-      dropout: 0.0
+      dropout: 0.1
     rnn:
       hidden_size: 512
-      num_layers: 3
-      dropout: 0.0
+      num_layers: 5
+      dropout: 0.2
       use_residual: True
 
 
 # Training settings
 train:
-  loss: mse # either mse, mae, mae-weighted or soft-dtw
+  loss: mae # either mse, mae, mae-weighted or soft-dtw
   max_number_of_epochs: 1000
   early_stopping: False
   gradient_clipping:
     use_grad_clip: True
     grad_clip_threshold: 1.
+  backup_frequency: 1
 
 # LR Scheduler
 lr_scheduler:

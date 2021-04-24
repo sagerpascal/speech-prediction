@@ -42,7 +42,7 @@ stats:
     train:
       mean: -14.926456
       std: 70.814964
-  mel-spectro:
+  mel-spectro-amp:
     train:
       mean: 0.08340319991111755
       std: 1.078992486000061

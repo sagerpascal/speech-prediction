@@ -59,16 +59,19 @@ def _get_loader(conf, train_set, val_set, test_set, rank=None):
         pin_memory=pin_memory,
         sampler=valid_sampler,
     )
-    test_loader = DataLoader(
-        test_set,
-        batch_size=conf['train']['batch_size'],
-        shuffle=test_loader_shuffle,
-        drop_last=False,
-        collate_fn=collate_fn,
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-        sampler=test_sampler,
-    )
+    if test_set is not None:
+        test_loader = DataLoader(
+            test_set,
+            batch_size=conf['train']['batch_size'],
+            shuffle=test_loader_shuffle,
+            drop_last=False,
+            collate_fn=collate_fn,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            sampler=test_sampler,
+        )
+    else:
+        test_loader = None
 
     return train_loader, val_loader, test_loader
 
@@ -82,17 +85,19 @@ def _get_torch_speech_commands(conf, device):
 
 
 def _get_dataset(conf, device, with_waveform):
-    if conf['data']['type'] == 'raw' and conf['data'].get('paths').get('raw').get('h5') is not None or \
-            conf['data']['type'] == 'mfcc' and conf['data'].get('paths').get('mfcc').get('h5') is not None or \
-            conf['data']['type'] == 'mel-spectro' and conf['data'].get('paths').get('mel-spectro').get('h5') is not None:
+    if conf['data'].get('paths').get(conf['data']['type']) is not None and conf['data'].get('paths').get(conf['data']['type']).get('h5') is not None:
         train_set = AudioDatasetH5(conf, mode='train', with_waveform=with_waveform)
         val_set = AudioDatasetH5(conf, mode='val', with_waveform=with_waveform)
         test_set = AudioDatasetH5(conf, mode='test', with_waveform=with_waveform)
     else:
-        logger.warn("Using slow dataset (single files instead of h5)")
+        logger.warning("Using slow dataset (single files instead of h5)")
         train_set = AudioDataset(conf, mode='train')
         val_set = AudioDataset(conf, mode='val')
         test_set = AudioDataset(conf, mode='test')
+
+    # optional, e.g. not needed for pretraining set
+    if len(test_set) == 0:
+        test_set = None
 
     return _get_loader(conf, train_set, val_set, test_set, rank=device)
 
@@ -100,7 +105,7 @@ def _get_dataset(conf, device, with_waveform):
 def get_loaders(conf, device, with_waveform=False):
     if conf['data']['dataset'] == 'torch-speech-commands':
         return _get_torch_speech_commands(conf, device)
-    elif conf['data']['dataset'] == 'timit' or conf['data']['dataset'] == 'vox2':
+    elif conf['data']['dataset'] == 'timit' or conf['data']['dataset'] == 'vox2' or conf['data']['dataset'] == 'libri-speech':
         return _get_dataset(conf, device, with_waveform=with_waveform)
     else:
         raise AttributeError("Unknown dataset: {}".format(conf['data']['dataset']))

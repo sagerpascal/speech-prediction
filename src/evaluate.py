@@ -207,6 +207,8 @@ def plot_one_predicted_batch(conf, loader_test, model):
 
     with torch.no_grad():
         y_pred = model.predict(x_t)
+        if isinstance(y_pred, tuple):
+            y_pred = y_pred[0]
 
     print("MSE = {}".format(torch.nn.functional.mse_loss(y_pred.to('cpu'), target.to('cpu'))))
 
@@ -219,17 +221,19 @@ def plot_one_predicted_batch(conf, loader_test, model):
 
         mse = mean_squared_error(label_gt, label_pr)
 
-        complete_data = undo_zero_norm(complete_data, mean, std)
-        data_x = undo_zero_norm(data_x, mean, std)
-        label_gt = undo_zero_norm(label_gt, mean, std)
-        label_pr = undo_zero_norm(label_pr, mean, std)
+        # TODO: cleanup
+        # complete_data = undo_zero_norm(complete_data, mean, std)
+        # data_x = undo_zero_norm(data_x, mean, std)
+        # label_gt = undo_zero_norm(label_gt, mean, std)
+        # label_pr = undo_zero_norm(label_pr, mean, std)
 
 
         if is_mel_spectro:
-            complete_data = librosa.power_to_db(complete_data, ref=np.max)
-            data_x = librosa.power_to_db(data_x, ref=np.max)
-            label_gt = librosa.power_to_db(label_gt, ref=np.max)
-            label_pr = librosa.power_to_db(label_pr, ref=np.max)
+            # TODO: cleanup
+            # complete_data = librosa.power_to_db(complete_data, ref=np.max)
+            # data_x = librosa.power_to_db(data_x, ref=np.max)
+            # label_gt = librosa.power_to_db(label_gt, ref=np.max)
+            # label_pr = librosa.power_to_db(label_pr, ref=np.max)
             vmin, vmax = None, None
         else:
             vmin, vmax = np.min(complete_data), np.max(complete_data)
@@ -292,7 +296,10 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
     if with_prediction:
         with torch.no_grad():
             x_t, y_t = x.unsqueeze(0).to(conf['device']), y.unsqueeze(0).to(conf['device'])
-            y_pred = model.forward(x_t).squeeze()
+            y_pred = model.forward(x_t)
+            if isinstance(y_pred, tuple):
+                y_pred = y_pred[0]
+            y_pred = y_pred.squeeze()
             y_pred = y_pred.cpu().numpy()
             y_pred = undo_zero_norm(y_pred, mean, std)
 
@@ -300,9 +307,28 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
     x = x.cpu().numpy()
     y = y.cpu().numpy()
 
-    original = undo_zero_norm(original, mean, std)
-    x = undo_zero_norm(x, mean, std)
-    y = undo_zero_norm(y, mean, std)
+    if conf['data']['type'] == 'mel-spectro':
+        tmp = np.zeros((conf['masking']['n_frames']+conf['masking']['k_frames'], conf['data']['transform']['n_mels']))
+        tmp[:conf['masking']['n_frames'], :] = x
+        tmp[conf['masking']['n_frames']:, :] = y
+
+        tmp_amp = librosa.db_to_power(tmp)  # calculation depends on highest signal -> therefore concatenate x and y
+
+        x = tmp_amp[:conf['masking']['n_frames'], :]
+        y = tmp_amp[conf['masking']['n_frames']:, :]
+
+        tmp[:conf['masking']['n_frames'], :] = x
+        tmp[conf['masking']['n_frames']:, :] = y_pred
+
+        tmp_amp = librosa.db_to_power(tmp)
+        y_pred = tmp_amp[conf['masking']['n_frames']:, :]
+
+        original = librosa.db_to_power(original)
+
+    # TODO: cleanup
+    # original = undo_zero_norm(original, mean, std)
+    # x = undo_zero_norm(x, mean, std)
+    # y = undo_zero_norm(y, mean, std)
 
     # # Just for comparison...
     # reconstructed_orig = np.zeros((x.shape[0] + y.shape[0], y.shape[1]))
@@ -346,36 +372,36 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
 
         print("Playing Signal of original sound...")
         time.sleep(0.5)
-        sd.play(to_audio(original.T, hop_length=conf['data']['transform']['hop_length']),
+        sd.play(to_audio(original.T, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
                 conf['data']['transform']['sample_rate'], blocking=True)
 
         print("Input (masked) signal...")
         time.sleep(0.5)
-        sd.play(to_audio(x.T, hop_length=conf['data']['transform']['hop_length']),
+        sd.play(to_audio(x.T, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
                 conf['data']['transform']['sample_rate'], blocking=True)
 
         if with_prediction:
             print("Playing reconstructed signal...")
             time.sleep(0.5)
-            sd.play(to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length']),
+            sd.play(to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
                     conf['data']['transform']['sample_rate'], blocking=True)
 
         print("Playing MFCC of original sound...")
         time.sleep(0.5)
-        sd.play(to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length']),
+        sd.play(to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
                 conf['data']['transform']['sample_rate'], blocking=True)
 
     if waveform is not None:
         scipy.io.wavfile.write('eval_out/waveform.wav', conf['data']['transform']['sample_rate'], waveform.T)
     scipy.io.wavfile.write('eval_out/original.wav', conf['data']['transform']['sample_rate'],
-                           to_audio(original.T, hop_length=conf['data']['transform']['hop_length']))
+                           to_audio(original.T, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']))
     scipy.io.wavfile.write('eval_out/MFCC_masked.wav', conf['data']['transform']['sample_rate'],
-                           to_audio(x.T, hop_length=conf['data']['transform']['hop_length']))
+                           to_audio(x.T, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']))
     if with_prediction:
         scipy.io.wavfile.write('eval_out/reconstructed.wav', conf['data']['transform']['sample_rate'],
-                               to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length']))
+                               to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']))
     scipy.io.wavfile.write('eval_out/reconstructed_orig.wav', conf['data']['transform']['sample_rate'],
-                           to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length']))
+                           to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']))
 
 
 def evaluate(conf):
@@ -384,15 +410,15 @@ def evaluate(conf):
 
     conf['env']['world_size'] = 1
     conf['env']['use_data_parallel'] = False
-    _, _, loader_test = get_loaders(conf, device=conf['device'], with_waveform=False)
+    loader_test, _, _ = get_loaders(conf, device=conf['device'], with_waveform=False)
     loader_test.collate_fn = collate_fn_debug
     model = get_model(conf, conf['device'])
     metrics = get_metrics(conf, conf['device'])
 
     # calc_baseline(conf, compare_model=False, plot_best_results=False)
 
-    plot_one_predicted_batch(conf, loader_test, model)
-    # play_audio_files(conf, loader_test, model)
+    # plot_one_predicted_batch(conf, loader_test, model)
+    play_audio_files(conf, loader_test, model)
     # calc_metrics(conf, loader_test, model, metrics)
 
     # play_audio_files(conf, loader_test, None, with_prediction=False)

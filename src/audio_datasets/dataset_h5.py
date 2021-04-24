@@ -6,16 +6,20 @@ import numpy as np
 import pandas as pd
 import torch
 import torchaudio
+import logging
 from torch.utils.data import Dataset
 from audio_datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform
 from audio_datasets.normalization import zero_norm, undo_zero_norm
 from audio_datasets.preprocessing import get_frames_preprocess_fn
 from utils.conf_reader import get_config
 
+logger = logging.getLogger(__name__)
 
 class AudioDatasetH5(Dataset):
 
     def __init__(self, conf, mode, h5_base_path='/workspace/data_pa/', with_waveform=False):
+
+        h5_base_path = 'D:/Projekte/temporal-speech-context/data'
 
         h5_base_path = Path(h5_base_path)
         meta_base_path = Path('audio_datasets/dfs')
@@ -60,8 +64,8 @@ class AudioDatasetH5(Dataset):
 
         # std and mean from training set
         if conf['data']['type'] == 'raw':
-            self.mean = conf['data']['stats']['raw']['train']['mean']
-            self.std = conf['data']['stats']['raw']['train']['std']
+            self.mean = conf['data'].get('stats').get('raw').get('train').get('mean')
+            self.std = conf['data'].get('stats').get('raw').get('train').get('std')
             self.length_key, self.start_key, self.end_key = 'raw_length', 'raw_start', 'raw_end'
             self.file_key = 'RAW'
             self.use_norm = False
@@ -69,20 +73,26 @@ class AudioDatasetH5(Dataset):
             self.transform = get_mel_spectro_transform(conf)
 
         elif conf['data']['type'] == 'mfcc':
-            self.mean = conf['data']['stats']['mfcc']['train']['mean']
-            self.std = conf['data']['stats']['mfcc']['train']['std']
+            self.mean = conf['data'].get('stats').get('mfcc').get('train').get('mean')
+            self.std = conf['data'].get('stats').get('mfcc').get('train').get('std')
             self.length_key, self.start_key, self.end_key = 'MFCC_length', 'MFCC_start', 'MFCC_end'
             self.file_key = 'MFCC'
             self.use_norm = True
             self.shape_len = 3
 
         elif conf['data']['type'] == 'mel-spectro':
-            self.mean = conf['data']['stats']['mel-spectro']['train']['mean']
-            self.std = conf['data']['stats']['mel-spectro']['train']['std']
+            self.mean = conf['data'].get('stats').get('mel-spectro').get('train').get('mean')
+            self.std = conf['data'].get('stats').get('mel-spectro').get('train').get('std')
             self.length_key, self.start_key = 'mel_spectro_length', 'mel_spectro_start'
             self.end_key, self.file_key = 'mel_spectro_end', 'Mel-Spectrogram'
             self.use_norm = True
             self.shape_len = 3
+            self.to_db = torchaudio.transforms.AmplitudeToDB()
+
+        if self.use_norm:
+            if self.mean is None or self.std is None:
+                logger.warning("Cannot use global normalization: Mean and/or Std not defined")
+                self.use_norm = False
 
         self.preprocess = get_frames_preprocess_fn(mask_pos=conf['masking']['position'],
                                                    n_frames=conf['masking']['n_frames'],
@@ -153,22 +163,24 @@ class AudioDatasetH5(Dataset):
         elif self.shape_len == 3:
             complete_data = self.h5_file[self.file_key][:, :, start_idx:end_idx]  # mfcc or mel-spectro
 
+        complete_data = torch.from_numpy(complete_data)
+
+        if self.to_db is not None:
+            complete_data = self.to_db(complete_data)
+
         if self.use_norm:
             complete_data = zero_norm(complete_data, self.mean, self.std)
-
-        complete_data = torch.from_numpy(complete_data)
 
         if self.shape_len == 2:
             data, target = self.preprocess(complete_data.unsqueeze(0))
             data = data.squeeze(0)
             target = target.squeeze(0)
-            target = self.transform(target)  # TODO cleanup
-
+            target = self.transform(target)
 
         else:
             data, target = self.preprocess(complete_data)
 
-        return data, target, complete_data, waveform, speaker # , start_idx, end_idx, self.dataset_df['file_path'][index_dataframe], index_dataframe
+        return data, target, complete_data, waveform, speaker
 
     def __len__(self):
         return self.dataset_length

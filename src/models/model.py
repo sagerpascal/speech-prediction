@@ -51,7 +51,10 @@ def load_weights(net_config, model, rank=None):
     name = "{}.pth".format(net_config['load_weights'])
     mapping = torch.device(net_config['device']) if not isinstance(rank, int) else {'cuda:%d' % 0: 'cuda:%d' % rank}
 
-    state_dict = torch.load("/workspace/data_pa/trained_models/{}".format(name), map_location=mapping)
+    try:
+        state_dict = torch.load("/workspace/data_pa/trained_models/{}".format(name), map_location=mapping)
+    except:
+        state_dict = torch.load("trained_models/{}".format(name), map_location=mapping)
 
     state_dict_single = {}
     for k, v in state_dict.items():
@@ -60,7 +63,7 @@ def load_weights(net_config, model, rank=None):
         else:
             state_dict_single[k] = v
 
-    model.load_state_dict(state_dict_single)
+    model.load_state_dict(state_dict_single, strict=False) # TODO: remove strict=False
 
 
 def count_parameters(model):

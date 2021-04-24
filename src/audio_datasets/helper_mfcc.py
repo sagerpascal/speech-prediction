@@ -1,21 +1,21 @@
-import os
-
-from pathlib import Path
-import pandas as pd
-from sklearn.model_selection import train_test_split
-import torchaudio
-from tqdm import tqdm
-import numpy as np
-import matplotlib.pyplot as plt
-from utils.conf_reader import get_config
-import h5py
-from dataloader import get_loaders
-import copy
-from audio_datasets.preprocessing import get_mfcc_transform
-import torch
 import logging
+import os
+from pathlib import Path
+
+import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import torch
+import torchaudio
+from sklearn.model_selection import train_test_split
+from tqdm import tqdm
+
+from audio_datasets.preprocessing import get_mfcc_transform
+from utils.conf_reader import get_config
 
 logger = logging.getLogger(__name__)
+
 
 def _get_all_files(path):
     data = {}
@@ -24,7 +24,7 @@ def _get_all_files(path):
         for filename in files:
             filepath = Path(root) / filename
             data['file_name'].append(filename)
-            data['file_path'].append(filepath)
+            data['file_path'].append(str(filepath.absolute()))
 
     return data
 
@@ -118,7 +118,26 @@ def create_df_vox2():
     print("Total {}/{}".format(len(df_train) + len(df_val) + len(df_test), 2256492 / 2))
 
 
-def add_to_file(i, mfcc_start, mfcc, speaker, filename, mfcc_d, speaker_d, filepath_d, meta_d, n_features, vox2=True, length_idx=2):
+def _create_df_file_libri(path):
+    files = _get_all_files(path)
+    df = pd.DataFrame.from_dict(files)
+    df = df[df['file_path'].str.endswith('.flac')]
+    df['speaker'] = df['file_path'].str.split('\\').str.get(-2)
+    print(df.head())
+    return df
+
+
+def create_df_libri():
+    df_train = _create_df_file_libri('D:/Projekte/temporal-speech-context/data/LibriSpeech/train-clean-360')
+
+    df_train, df_val = train_test_split(df_train, test_size=0.03)
+
+    df_train.to_csv(r'{}.csv'.format('libri-speech-orig-train'), index=False)
+    df_val.to_csv(r'{}.csv'.format('libri-speech-orig-val'), index=False)
+
+
+def add_to_file(i, mfcc_start, mfcc, speaker, filename, mfcc_d, speaker_d, filepath_d, meta_d, n_features, vox2=True,
+                length_idx=2):
     mfcc_end = mfcc_start + mfcc.shape[length_idx]
     mfcc_d.resize((1, n_features, mfcc_end))
     mfcc_d[:, :, mfcc_start:mfcc_end] = mfcc
@@ -135,8 +154,8 @@ def _create_h5_file_timit(conf, df_fp, h5_name, df_name):
 
     f_h5 = h5py.File(h5_name, 'w', libver='latest')
     mfcc_dataset = f_h5.create_dataset('MFCC', (1, conf['data']['transform']['n_mfcc'], 1),
-                                              maxshape=(1, conf['data']['transform']['n_mfcc'], None), chunks=True,
-                                              dtype='float32')
+                                       maxshape=(1, conf['data']['transform']['n_mfcc'], None), chunks=True,
+                                       dtype='float32')
     speaker_dataset = f_h5.create_dataset('Speaker', (number_of_entries, 1), 'S7')
     filepath_dataset = f_h5.create_dataset('Filepath', (number_of_entries, 1), 'S30')
     meta_dataset = f_h5.create_dataset('META', (number_of_entries, 2), dtype='int64')
@@ -156,8 +175,8 @@ def _create_h5_file_timit(conf, df_fp, h5_name, df_name):
         speakers.append(speaker)
 
         mfcc_end = add_to_file(index, mfcc_start, mfcc.cpu(), speaker, filename,
-                                      mfcc_dataset, speaker_dataset, filepath_dataset,
-                                      meta_dataset, n_features=conf['data']['transform']['n_mfcc'], vox2=False)
+                               mfcc_dataset, speaker_dataset, filepath_dataset,
+                               meta_dataset, n_features=conf['data']['transform']['n_mfcc'], vox2=False)
 
         mfcc_ends.append(mfcc_end)
         mfcc_start = mfcc_end
@@ -186,7 +205,6 @@ def create_h5_file_timit():
     _create_h5_file_timit(conf, test_fp, 'timit_mfcc_test.h5', 'timit_metadata_test')
 
 
-
 def create_h5_file_vox2():
     conf = get_config()
     df_base_path = Path('audio_datasets/dfs')
@@ -198,7 +216,7 @@ def create_h5_file_vox2():
     valid_files = valid_df['file_path'].str.rstrip('.wav').str.strip('/workspace/data_pa/VOX2/AUDIO_FILES/').tolist()
     test_files = test_df['file_path'].str.rstrip('.wav').str.strip('/workspace/data_pa/VOX2/AUDIO_FILES/').tolist()
     test_speakers = test_df['speaker'].tolist()
-    test_speakers = list(dict.fromkeys(test_speakers)) # remove duplicates
+    test_speakers = list(dict.fromkeys(test_speakers))  # remove duplicates
 
     f = h5py.File('/workspace/data_pa/vox2_original.h5', 'r', libver='latest', swmr=True)
     f_train_new = h5py.File('/workspace/data_pa/vox2_mfcc_train.h5', 'w', libver='latest')
@@ -331,6 +349,7 @@ def create_metadata_timit():
     _add_lengths_df_timit(conf, val_fp)
     _add_lengths_df_timit(conf, test_fp)
 
+
 if __name__ == '__main__':
     os.chdir('../')
-    create_h5_file_timit()
+    create_df_libri()

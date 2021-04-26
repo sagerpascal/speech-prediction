@@ -1,0 +1,23 @@
+dataset: libri-speech
+
+paths:
+  df:
+    train: libri-speech-orig-train.csv
+    val: libri-speech-orig-val.csv
+    test: None
+
+stats:
+  mel-spectro:
+    train:
+      mean: -26.741683140888078
+      std: 19.058770492497896
+
+transform:
+  sample_rate: 16000
+  n_mfcc: 40
+  win_length: 400
+  hop_length: 200
+  n_fft: 512
+  f_min: 0
+  f_max: 8000
+  n_mels: 128

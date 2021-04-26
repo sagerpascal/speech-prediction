@@ -1,0 +1,26 @@
+dataset: vox2
+
+paths:
+  df:
+    train: vox2-orig-train.csv
+    val: vox2-orig-val.csv
+    test: vox2-orig-test.csv
+  mfcc:
+    h5:
+      train: VOX2/vox2_mfcc_train-128.h5
+      val: VOX2/vox2_mfcc_valid-128.h5
+      test: VOX2/vox2_mfcc_test-128.h5
+      metadata:
+        train: vox2_mfcc_metadata_train-128.csv
+        val: vox2_mfcc_metadata_valid-128.csv
+        test: vox2_mfcc_metadata_test-128.csv
+
+transform:
+  sample_rate: 16000
+  n_mfcc: 40
+  win_length: 400
+  hop_length: 200
+  n_fft: 512
+  f_min: 0
+  f_max: 8000
+  n_mels: 128

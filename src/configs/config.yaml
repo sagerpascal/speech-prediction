@@ -15,7 +15,7 @@ masking:
 # Dataset
 data:
   type: mel-spectro # raw, mel-spectro or mfcc
-  config_file: datasets/libri-speech.yaml
+  config_file: datasets/timit-original.yaml
 
 # Model settings
 model:

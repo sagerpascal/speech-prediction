@@ -5,12 +5,21 @@ paths:
     train: libri-speech-orig-train.csv
     val: libri-speech-orig-val.csv
     test: None
+  mel-spectro:
+    h5:
+      train: LibriSpeech/libri-speech_mel-spectro_train-80.h5
+      val: LibriSpeech/libri-speech_mel-spectro_valid-80.h5
+      test: None
+      metadata:
+        train: libri-speech_mel_spectro_metadata_train-80.csv
+        val: libri-speech_mel_spectro_metadata_valid-80.csv
+        test: None
 
 stats:
   mel-spectro:
     train:
-      mean: -26.741683140888078
-      std: 19.058770492497896
+      mean: -23.484376907348633
+      std: 0.1036109030246734
 
 transform:
   sample_rate: 16000
@@ -20,4 +29,4 @@ transform:
   n_fft: 512
   f_min: 0
   f_max: 8000
-  n_mels: 128
+  n_mels: 80

@@ -1,0 +1,58 @@
+dataset: timit
+
+paths:
+  df:
+    train: timit-orig-train.csv
+    val: timit-orig-val.csv
+    test: timit-orig-test.csv
+  raw:
+    h5:
+      train: TIMIT/timit_raw_train-128.h5
+      val: TIMIT/timit_raw_valid-128.h5
+      test: TIMIT/timit_raw_test-128.h5
+      metadata:
+        train: timit_raw_metadata_train-128.csv
+        val: timit_raw_metadata_valid-128.csv
+        test: timit_raw_metadata_test-128.csv
+  mfcc:
+    h5:
+      train: TIMIT/timit_mfcc_train-128.h5
+      val: TIMIT/timit_mfcc_valid-128.h5
+      test: TIMIT/timit_mfcc_test-128.h5
+      metadata:
+        train: timit_mfcc_metadata_train-128.csv
+        val: timit_mfcc_metadata_valid-128.csv
+        test: timit_mfcc_metadata_test-128.csv
+  mel-spectro:
+    h5:
+      train: TIMIT/timit_mel-spectro_train-128.h5
+      val: TIMIT/timit_mel-spectro_valid-128.h5
+      test: TIMIT/timit_mel-spectro_test-128.h5
+      metadata:
+        train: timit_mel_spectro_metadata_train-128.csv
+        val: timit_mel_spectro_metadata_valid-128.csv
+        test: timit_mel_spectro_metadata_test-128.csv
+
+stats:
+  raw:
+    train:
+      mean: 0.00000020026256208893756
+      std: 0.004097380209714174
+  mfcc:
+    train:
+      mean: -14.926456
+      std: 70.814964
+  mel-spectro-amplitude:
+    train:
+      mean: 0.08340319991111755
+      std: 1.078992486000061
+
+transform:
+  sample_rate: 16000
+  n_mfcc: 40
+  win_length: 400
+  hop_length: 200
+  n_fft: 512
+  f_min: 0
+  f_max: 8000
+  n_mels: 128

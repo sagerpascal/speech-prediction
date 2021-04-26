@@ -12,10 +12,11 @@ from audio_datasets.preprocessing import get_mel_spectro_transform
 from utils.conf_reader import get_config
 
 
-def create_h5_file_timit(conf, orig_fp, meta_fp, h5_name):
+def create_h5_file(conf, orig_fp, meta_fp, h5_name):
     base_path = Path('audio_datasets/dfs')
     df = pd.read_csv(base_path / orig_fp)
     mel_spectro_transform = get_mel_spectro_transform(conf).to('cuda')
+    to_db = torchaudio.transforms.AmplitudeToDB()
     number_of_entries = len(df)
 
     f_h5 = h5py.File(h5_name, 'w', libver='latest')
@@ -32,7 +33,9 @@ def create_h5_file_timit(conf, orig_fp, meta_fp, h5_name):
     for index, row in tqdm(df.iterrows(), total=len(df)):
         waveform = torchaudio.load(row['file_path'])
         mel_spectro = mel_spectro_transform(waveform[0].to('cuda'))
-        speaker = row['speaker']
+        mel_spectro = to_db(mel_spectro)
+
+        speaker = str(row['speaker'])
         filename = row['file_path'][len('/workspace/data_pa/TIMIT/AUDIO_FILES/ORIGINAL/'):]
 
         indexes.append(index)
@@ -60,21 +63,34 @@ def create_h5_file_timit(conf, orig_fp, meta_fp, h5_name):
     df.to_csv(base_path / orig_fp, index=False)
 
 
-def calc_mean_std():
-    h5_file = h5py.File('/workspace/data_pa/TIMIT/timit_mel-spectro_train.h5', 'r')
+def calc_mean_std(fp):
+    h5_file = h5py.File(fp, 'r')
     mel_spectros = h5_file['Mel-Spectrogram']
-    mel_spectros_np = mel_spectros[0:mel_spectros.shape[2]]
-    print("Mel-Spctrogram: AVG={} STD={}".format(np.mean(mel_spectros_np), np.std(mel_spectros_np)))
+    mean_l, std_l = [], []
+    n_buckets = 50
+    bucket_size = mel_spectros.shape[2] // n_buckets
+    for i in tqdm(range(n_buckets)):
+        start_idx, end_idx = i*bucket_size, (i+1)*bucket_size
+        mel_spectros_np = mel_spectros[:, :, start_idx:end_idx]
+        mean_l.append(np.mean(mel_spectros_np))
+        std_l.append(np.std(mel_spectros_np))
+    print("Mel-Spctrogram: AVG={} STD={}".format(np.mean(np.array(mean_l)), np.std(np.array(std_l))))
 
 
 
 if __name__ == '__main__':
-    # os.chdir('../')
-    # conf = get_config()
-    # create_h5_file_timit(conf, 'timit-orig-train.csv', 'timit_mel_spectro_metadata_train.csv',
-    #                      'timit_mel-spectro_train.h5')
-    # create_h5_file_timit(conf, 'timit-orig-val.csv', 'timit_mel_spectro_metadata_valid.csv',
-    #                      'timit_mel-spectro_valid.h5')
-    # create_h5_file_timit(conf, 'timit-orig-test.csv', 'timit_mel_spectro_metadata_test.csv',
-    #                      'timit_mel-spectro_test.h5')
-    calc_mean_std()
+    os.chdir('../')
+    conf = get_config()
+    # create_h5_file(conf, 'timit-orig-train.csv', 'timit_mel_spectro_metadata_train_dB-80.csv',
+    #                'timit_mel-spectro_train_dB-80.h5')
+    # create_h5_file(conf, 'timit-orig-val.csv', 'timit_mel_spectro_metadata_valid_dB-80.csv',
+    #                'timit_mel-spectro_valid_dB-80.h5')
+    # create_h5_file(conf, 'timit-orig-test.csv', 'timit_mel_spectro_metadata_test_dB-80.csv',
+    #                'timit_mel-spectro_test_dB-80.h5')
+    # calc_mean_std('timit_mel-spectro_train_dB-80.h5')
+
+    # create_h5_file(conf, 'libri-speech-orig-train.csv', 'libri-speech_mel_spectro_metadata_train.csv',
+    #                'libri-speech_mel-spectro_train_dB-80.h5')
+    # create_h5_file(conf, 'libri-speech-orig-val.csv', 'libri-speech_mel_spectro_metadata_val.csv',
+    #                    'libri-speech_mel-spectro_val_dB-80.h5')
+    calc_mean_std('D:/Projekte/temporal-speech-context/data/libri-speech_mel-spectro_train_dB-80.h5')

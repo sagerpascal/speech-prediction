@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def _get_loader(conf, train_set, val_set, test_set, rank=None):
     if "cuda" in conf['device']:
-        num_workers = 0 if platform.system() == "Windows" else 2
+        num_workers = 0 if platform.system() == "Windows" else 3
         pin_memory = True
     else:
         num_workers = 0
@@ -28,10 +28,13 @@ def _get_loader(conf, train_set, val_set, test_set, rank=None):
                                            num_replicas=conf['env']['world_size'],
                                            rank=rank,
                                            shuffle=False)
-        test_sampler = DistributedSampler(test_set,
-                                          num_replicas=conf['env']['world_size'],
-                                          rank=rank,
-                                          shuffle=False)
+        if test_set is not None:
+            test_sampler = DistributedSampler(test_set,
+                                              num_replicas=conf['env']['world_size'],
+                                              rank=rank,
+                                              shuffle=False)
+        else:
+            test_sampler = None
 
         train_loader_shuffle, val_loader_shuffle, test_loader_shuffle = False, False, False
 

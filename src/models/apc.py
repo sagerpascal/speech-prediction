@@ -38,10 +38,10 @@ class Postnet(nn.Module):
     extraction.
     """
 
-    def __init__(self, input_size, output_size):
+    def __init__(self, conf, input_size, output_size):
         super(Postnet, self).__init__()
         # TODO: cleanup
-        self.layer_seq_len = nn.Linear(in_features=60, out_features=30)
+        self.layer_seq_len = nn.Linear(in_features=conf['masking']['n_frames'], out_features=conf['masking']['k_frames'])
         self.layer_dim = nn.Conv1d(in_channels=input_size, out_channels=output_size, kernel_size=1, stride=1)
 
     def forward(self, inputs):
@@ -106,6 +106,7 @@ class APCModel(nn.Module):
         self.rnn_residual = self.rnn_conf['use_residual']
 
         self.postnet = Postnet(
+            conf,
             input_size=self.rnn_conf['hidden_size'],
             output_size=feature_dim)
 

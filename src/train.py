@@ -233,7 +233,7 @@ def train(rank=None, world_size=None, conf=None):
                               is_master=is_main_process,
                               )
         model.to(rank)
-        model = DDP(model, device_ids=[rank], find_unused_parameters=True)
+        model = DDP(model, device_ids=[rank], find_unused_parameters=False)
     else:
         device = conf['device']
         model = get_model(conf, device)

@@ -19,8 +19,6 @@ class AudioDatasetH5(Dataset):
 
     def __init__(self, conf, mode, h5_base_path='/workspace/data_pa/', with_waveform=False):
 
-        h5_base_path = 'D:/Projekte/temporal-speech-context/data'
-
         h5_base_path = Path(h5_base_path)
         meta_base_path = Path('audio_datasets/dfs')
 
@@ -60,82 +58,86 @@ class AudioDatasetH5(Dataset):
         else:
             raise AttributeError("Unknown mode: {}".format(mode))
 
-        self.metadata_df = pd.read_csv(md_fp)
-
-        # std and mean from training set
-        if conf['data']['type'] == 'raw':
-            self.mean = conf['data'].get('stats').get('raw').get('train').get('mean')
-            self.std = conf['data'].get('stats').get('raw').get('train').get('std')
-            self.length_key, self.start_key, self.end_key = 'raw_length', 'raw_start', 'raw_end'
-            self.file_key = 'RAW'
-            self.use_norm = False
-            self.shape_len = 2
-            self.transform = get_mel_spectro_transform(conf)
-
-        elif conf['data']['type'] == 'mfcc':
-            self.mean = conf['data'].get('stats').get('mfcc').get('train').get('mean')
-            self.std = conf['data'].get('stats').get('mfcc').get('train').get('std')
-            self.length_key, self.start_key, self.end_key = 'MFCC_length', 'MFCC_start', 'MFCC_end'
-            self.file_key = 'MFCC'
-            self.use_norm = True
-            self.shape_len = 3
-
-        elif conf['data']['type'] == 'mel-spectro':
-            self.mean = conf['data'].get('stats').get('mel-spectro').get('train').get('mean')
-            self.std = conf['data'].get('stats').get('mel-spectro').get('train').get('std')
-            self.length_key, self.start_key = 'mel_spectro_length', 'mel_spectro_start'
-            self.end_key, self.file_key = 'mel_spectro_end', 'Mel-Spectrogram'
-            self.use_norm = True
-            self.shape_len = 3
-            self.to_db = torchaudio.transforms.AmplitudeToDB()
-
-        if self.use_norm:
-            if self.mean is None or self.std is None:
-                logger.warning("Cannot use global normalization: Mean and/or Std not defined")
-                self.use_norm = False
-
-        self.preprocess = get_frames_preprocess_fn(mask_pos=conf['masking']['position'],
-                                                   n_frames=conf['masking']['n_frames'],
-                                                   k_frames=conf['masking']['k_frames'],
-                                                   start_idx=conf['masking']['start_idx'])
-
-        self.h5_file = h5pickle.File(str(h5_fp.resolve()), 'r', skip_cache=False)  # , libver='latest', swmr=True)
-
-        self.k_frames = conf['masking']['k_frames']
-        self.n_frames = conf['masking']['n_frames']
-        self.window_shift = conf['masking']['window_shift']
-        self.sliding_window = conf['masking']['start_idx'] == 'sliding-window'
-        self.with_waveform = with_waveform
-
-        # ignore all files < k_frames + n_frames
-        valid_idx = self.metadata_df[self.length_key] >= (self.n_frames + self.k_frames)
-        self.metadata_df = self.metadata_df[valid_idx]
-
-        if self.with_waveform:
-            self.dataset_df = pd.read_csv(ds_fp)
-            self.dataset_df = self.dataset_df[valid_idx]
-
-        print("{} set has {} valid entries".format(mode, len(self.metadata_df)))
-
-        # calculate new index mapping if with sliding window
-        if self.sliding_window:
-            self.sliding_window_indexes = {}  # mapping item -> [index_dataframe, start_key, end_key]
-            item_count = 0
-            for index, row in self.metadata_df.iterrows():
-                length, start, end = row[self.length_key], row[self.start_key], row[self.end_key]
-
-                while self.n_frames + self.k_frames <= length:
-                    assert start + self.n_frames + self.k_frames <= end
-                    self.sliding_window_indexes[item_count] = [index, start, start + self.n_frames + self.k_frames]
-                    start += self.window_shift
-                    length -= self.window_shift
-                    item_count += 1
-
-        # calculate the dataset length
-        if self.sliding_window:
-            self.dataset_length = len(self.sliding_window_indexes)
+        if not md_fp.exists():
+            logger.warning("Dataset for mode {} not defined".format(mode))
+            self.dataset_length = 0
         else:
-            self.dataset_length = len(self.metadata_df)
+            self.metadata_df = pd.read_csv(md_fp)
+
+            # std and mean from training set
+            if conf['data']['type'] == 'raw':
+                self.mean = conf['data'].get('stats').get('raw').get('train').get('mean')
+                self.std = conf['data'].get('stats').get('raw').get('train').get('std')
+                self.length_key, self.start_key, self.end_key = 'raw_length', 'raw_start', 'raw_end'
+                self.file_key = 'RAW'
+                self.use_norm = False
+                self.shape_len = 2
+                self.transform = get_mel_spectro_transform(conf)
+
+            elif conf['data']['type'] == 'mfcc':
+                self.mean = conf['data'].get('stats').get('mfcc').get('train').get('mean')
+                self.std = conf['data'].get('stats').get('mfcc').get('train').get('std')
+                self.length_key, self.start_key, self.end_key = 'MFCC_length', 'MFCC_start', 'MFCC_end'
+                self.file_key = 'MFCC'
+                self.use_norm = True
+                self.shape_len = 3
+
+            elif conf['data']['type'] == 'mel-spectro':
+                self.mean = conf['data'].get('stats').get('mel-spectro').get('train').get('mean')
+                self.std = conf['data'].get('stats').get('mel-spectro').get('train').get('std')
+                self.length_key, self.start_key = 'mel_spectro_length', 'mel_spectro_start'
+                self.end_key, self.file_key = 'mel_spectro_end', 'Mel-Spectrogram'
+                self.use_norm = True
+                self.shape_len = 3
+                self.to_db = torchaudio.transforms.AmplitudeToDB()
+
+            if self.use_norm:
+                if self.mean is None or self.std is None:
+                    logger.warning("Cannot use global normalization: Mean and/or Std not defined")
+                    self.use_norm = False
+
+            self.preprocess = get_frames_preprocess_fn(mask_pos=conf['masking']['position'],
+                                                       n_frames=conf['masking']['n_frames'],
+                                                       k_frames=conf['masking']['k_frames'],
+                                                       start_idx=conf['masking']['start_idx'])
+
+            self.h5_file = h5pickle.File(str(h5_fp.resolve()), 'r', skip_cache=False)  # , libver='latest', swmr=True)
+
+            self.k_frames = conf['masking']['k_frames']
+            self.n_frames = conf['masking']['n_frames']
+            self.window_shift = conf['masking']['window_shift']
+            self.sliding_window = conf['masking']['start_idx'] == 'sliding-window'
+            self.with_waveform = with_waveform
+
+            # ignore all files < k_frames + n_frames
+            valid_idx = self.metadata_df[self.length_key] >= (self.n_frames + self.k_frames)
+            self.metadata_df = self.metadata_df[valid_idx]
+
+            if self.with_waveform:
+                self.dataset_df = pd.read_csv(ds_fp)
+                self.dataset_df = self.dataset_df[valid_idx]
+
+            print("{} set has {} valid entries".format(mode, len(self.metadata_df)))
+
+            # calculate new index mapping if with sliding window
+            if self.sliding_window:
+                self.sliding_window_indexes = {}  # mapping item -> [index_dataframe, start_key, end_key]
+                item_count = 0
+                for index, row in self.metadata_df.iterrows():
+                    length, start, end = row[self.length_key], row[self.start_key], row[self.end_key]
+
+                    while self.n_frames + self.k_frames <= length:
+                        assert start + self.n_frames + self.k_frames <= end
+                        self.sliding_window_indexes[item_count] = [index, start, start + self.n_frames + self.k_frames]
+                        start += self.window_shift
+                        length -= self.window_shift
+                        item_count += 1
+
+            # calculate the dataset length
+            if self.sliding_window:
+                self.dataset_length = len(self.sliding_window_indexes)
+            else:
+                self.dataset_length = len(self.metadata_df)
 
     def __getitem__(self, item):
 

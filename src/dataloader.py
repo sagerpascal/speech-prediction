@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def _get_loader(conf, train_set, val_set, test_set, rank=None):
     if "cuda" in conf['device']:
-        num_workers = 0 if platform.system() == "Windows" else 3
+        num_workers = 0 if platform.system() == "Windows" else 2
         pin_memory = True
     else:
         num_workers = 0

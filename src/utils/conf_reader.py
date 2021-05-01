@@ -26,7 +26,7 @@ def get_config():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", default='train', help="'train' or 'eval'")
-    parser.add_argument("--learning_rate", default=0.0001, help="The learning rate")
+    parser.add_argument("--lr", default=0.0001, help="The learning rate")
     parser.add_argument("--weight_decay", default=0.0001, help="Weight decay of the optimizer")
     parser.add_argument("--load_weights", default=None, help="name of the model to load")
     parser.add_argument("--batch_size", default=32, help="The mini-batch size")
@@ -41,7 +41,7 @@ def get_config():
     }
 
     conf = {**conf_file, **args_dict}
-    conf['optimizer']['lr'] = float(args.learning_rate)
+    conf['optimizer']['lr'] = float(args.lr)
     conf['optimizer']['weight_decay'] = float(args.weight_decay)
     conf['lr_scheduler']['step_size'] = int(args.step_size)
     conf['lr_scheduler']['gamma'] = float(args.gamma)

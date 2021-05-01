@@ -1,8 +1,8 @@
-use_wandb: False
+use_wandb: True
 
 # Environment
 env:
-  world_size: 1 # number of GPUs to run a batch in parallel
+  world_size: 2 # number of GPUs to run a batch in parallel
 
 # Mask MFCC
 masking:
@@ -25,7 +25,7 @@ model:
     n_encoder_layers: 6
     n_decoder_layers: 6
   unet:
-    encoder_name: efficientnet-b5
+    encoder_name: efficientnet-b3
     encoder_depth: 5
     decoder_channels:
       - 128

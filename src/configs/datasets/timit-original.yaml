@@ -7,13 +7,13 @@ paths:
     test: timit-orig-test.csv
   mel-spectro:
     h5:
-      train: TIMIT/timit_mel-spectro_train-80.h5
-      val: TIMIT/timit_mel-spectro_valid-80.h5
-      test: TIMIT/timit_mel-spectro_test-80.h5
+      train: TIMIT/timit_mel-spectro_train_dB-80.h5
+      val: TIMIT/timit_mel-spectro_valid_dB-80.h5
+      test: TIMIT/timit_mel-spectro_test_dB-80.h5
       metadata:
-        train: timit_mel_spectro_metadata_train-80.csv
-        val: timit_mel_spectro_metadata_valid-80.csv
-        test: timit_mel_spectro_metadata_test-80.csv
+        train: timit_mel_spectro_metadata_train_dB-80.csv
+        val: timit_mel_spectro_metadata_valid_dB-80.csv
+        test: timit_mel_spectro_metadata_test_dB-80.csv
 
 stats:
   mel-spectro:

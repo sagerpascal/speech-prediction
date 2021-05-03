@@ -135,7 +135,7 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_lo
     else:
         plt.plot(range_k, mse_mean, 'bs-', range_k, mse_last, 'g^-')
         plt.legend(['Mean of x', 'Last value of x'])
-    plt.title('MSE Baseline Predictions (n={})'.format(conf['masking']['n_frames']))
+    plt.title('Baseline Predictions (n={})'.format(conf['masking']['n_frames']))
     plt.xlabel('Number of masked frames k')
     plt.ylabel(loss_name)
     plt.grid()
@@ -221,12 +221,11 @@ def plot_one_predicted_batch(conf, loader_test, model):
 
         mse = mean_squared_error(label_gt, label_pr)
 
-        # TODO: cleanup
-        # complete_data = undo_zero_norm(complete_data, mean, std)
-        # data_x = undo_zero_norm(data_x, mean, std)
-        # label_gt = undo_zero_norm(label_gt, mean, std)
-        # label_pr = undo_zero_norm(label_pr, mean, std)
-
+        # Undo normalization
+        complete_data = undo_zero_norm(complete_data, mean, std)
+        data_x = undo_zero_norm(data_x, mean, std)
+        label_gt = undo_zero_norm(label_gt, mean, std)
+        label_pr = undo_zero_norm(label_pr, mean, std)
 
         if is_mel_spectro:
             # TODO: cleanup
@@ -325,10 +324,10 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
 
         original = librosa.db_to_power(original)
 
-    # TODO: cleanup
-    # original = undo_zero_norm(original, mean, std)
-    # x = undo_zero_norm(x, mean, std)
-    # y = undo_zero_norm(y, mean, std)
+    # Undo normalization
+    original = undo_zero_norm(original, mean, std)
+    x = undo_zero_norm(x, mean, std)
+    y = undo_zero_norm(y, mean, std)
 
     # # Just for comparison...
     # reconstructed_orig = np.zeros((x.shape[0] + y.shape[0], y.shape[1]))
@@ -410,7 +409,7 @@ def evaluate(conf):
 
     conf['env']['world_size'] = 1
     conf['env']['use_data_parallel'] = False
-    loader_test, _, _ = get_loaders(conf, device=conf['device'], with_waveform=False)
+    _, _, loader_test = get_loaders(conf, device=conf['device'], with_waveform=False)
     loader_test.collate_fn = collate_fn_debug
     model = get_model(conf, conf['device'])
     metrics = get_metrics(conf, conf['device'])

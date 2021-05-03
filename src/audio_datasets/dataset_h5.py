@@ -73,6 +73,7 @@ class AudioDatasetH5(Dataset):
                 self.use_norm = False
                 self.shape_len = 2
                 self.transform = get_mel_spectro_transform(conf)
+                self.to_db = None
 
             elif conf['data']['type'] == 'mfcc':
                 self.mean = conf['data'].get('stats').get('mfcc').get('train').get('mean')
@@ -81,6 +82,7 @@ class AudioDatasetH5(Dataset):
                 self.file_key = 'MFCC'
                 self.use_norm = True
                 self.shape_len = 3
+                self.to_db = None
 
             elif conf['data']['type'] == 'mel-spectro':
                 self.mean = conf['data'].get('stats').get('mel-spectro').get('train').get('mean')
@@ -89,7 +91,8 @@ class AudioDatasetH5(Dataset):
                 self.end_key, self.file_key = 'mel_spectro_end', 'Mel-Spectrogram'
                 self.use_norm = True
                 self.shape_len = 3
-                self.to_db = torchaudio.transforms.AmplitudeToDB()
+                # self.to_db = torchaudio.transforms.AmplitudeToDB()
+                self.to_db = None
 
             if self.use_norm:
                 if self.mean is None or self.std is None:

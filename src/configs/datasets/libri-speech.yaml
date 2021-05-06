@@ -7,12 +7,12 @@ paths:
     test: None
   mel-spectro:
     h5:
-      train: LibriSpeech/libri-speech_mel-spectro_train-80.h5
-      val: LibriSpeech/libri-speech_mel-spectro_valid-80.h5
+      train: LibriSpeech/libri-speech_mel-spectro_train_dB-80.h5
+      val: LibriSpeech/libri-speech_mel-spectro_val_dB-80.h5
       test: None
       metadata:
-        train: libri-speech_mel_spectro_metadata_train-80.csv
-        val: libri-speech_mel_spectro_metadata_valid-80.csv
+        train: libri-speech_mel_spectro_metadata_train_dB-80.csv
+        val: libri-speech_mel_spectro_metadata_val_dB-80.csv
         test: None
 
 stats:

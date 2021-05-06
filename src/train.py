@@ -13,7 +13,7 @@ from models.model import get_model
 from optimizer import get_optimizer, get_lr
 from utils.log import format_logs
 from utils.meter import AverageValueMeter
-from torch.nn.utils import clip_grad_norm
+from torch.nn.utils import clip_grad_norm_
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
 from utils.ddp import setup, cleanup
@@ -114,7 +114,11 @@ class TrainEpoch(Epoch):
         loss = self.loss(output, y)
         loss.backward()
         if self.use_grad_clip_norm:
-            grad_norm = clip_grad_norm(self.model.parameters(), self.grad_clip_threshold)
+            grad_norm = clip_grad_norm_(self.model.parameters(), self.grad_clip_threshold)
+            for name, param in self.model.named_parameters():
+                if param.grad.norm() >= 1.:
+                    logger.info("Gradients clipped")
+                    logger.info(name, param.grad.norm())
         self.optimizer.step()
         return loss, output
 
@@ -271,7 +275,7 @@ def train(rank=None, world_size=None, conf=None):
         wandb_run = setup_wandb(conf)
         wandb_log_settings(conf, loader_train, loader_val)
 
-    best_loss = 9999999
+    best_loss = 999999999999
     count_not_improved = 0
 
     for i in range(conf['train']['max_number_of_epochs']):

@@ -1,0 +1,17 @@
+name: TIMIT APC layer
+description: Sweep to determine number of layers for apc model
+program: main.py
+project: layer-apc-timit
+method: bayes
+metric:
+  name: Mean Absolute Error valid
+  goal: minimize
+parameters:
+  apc_num_prenet_layer:
+    values: [3, 5, 7, 9]
+  apc_num_rnn_layer:
+    values: [2, 3, 4, 5, 7]
+early_terminate:
+  type: hyperband
+  s: 10
+  max_iter: 60

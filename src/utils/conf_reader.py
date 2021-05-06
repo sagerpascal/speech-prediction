@@ -32,6 +32,8 @@ def get_config():
     parser.add_argument("--batch_size", default=32, help="The mini-batch size")
     parser.add_argument("--step_size", default=20, help="LR scheduler step size")
     parser.add_argument("--gamma", default=0.8, help="LR scheduler gamma")
+    parser.add_argument("--apc_num_prenet_layer", default=7, help="Number of prenet layers")
+    parser.add_argument("--apc_num_rnn_layer", default=5, help="Number of RNN layers")
     args = parser.parse_args()
 
     args_dict = {
@@ -49,5 +51,7 @@ def get_config():
     conf['env']['use_data_parallel'] = 'cuda' in device and conf_file['env']['world_size'] > 1
     conf['masking']['window_shift'] = conf['masking']['n_frames'] + conf['masking']['k_frames'] if \
         conf['masking']['window_shift'] == 'None' else conf['masking']['window_shift']
+    conf['model']['apc']['prenet']['num_layers'] = int(args.apc_num_prenet_layer)
+    conf['model']['apc']['rnn']['num_layers'] = int(args.apc_num_rnn_layer)
 
     return conf

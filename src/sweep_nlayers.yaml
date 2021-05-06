@@ -8,7 +8,7 @@ metric:
   goal: minimize
 parameters:
   apc_num_prenet_layer:
-    values: [3, 5, 7, 9]
+    values: [3, 5, 7, 9, 11, 13]
   apc_num_rnn_layer:
     values: [2, 3, 4, 5, 7]
 early_terminate:

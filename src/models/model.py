@@ -63,7 +63,7 @@ def load_weights(net_config, model, rank=None):
         else:
             state_dict_single[k] = v
 
-    model.load_state_dict(state_dict_single, strict=False) # TODO: remove strict=False
+    model.load_state_dict(state_dict_single, strict=True) # TODO: remove strict=False
 
 
 def count_parameters(model):

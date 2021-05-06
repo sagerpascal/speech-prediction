@@ -332,6 +332,18 @@ class SoftDTW(torch.nn.Module):
         y = y.unsqueeze(1).expand(-1, n, m, d)
         return torch.pow(x - y, 2).sum(3)
 
+    @staticmethod
+    def _abs_dist_func(x, y):
+        """
+        Calculates the absolute distance between each element in x and y per timestep
+        """
+        n = x.size(1)
+        m = y.size(1)
+        d = x.size(2)
+        x = x.unsqueeze(2).expand(-1, n, m, d)
+        y = y.unsqueeze(1).expand(-1, n, m, d)
+        return torch.abs(x - y).sum(3)
+
     def forward(self, X, Y):
         """
         Compute the soft-DTW value between X and Y

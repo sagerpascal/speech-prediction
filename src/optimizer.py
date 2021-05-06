@@ -16,14 +16,18 @@ def optimizer_to(optim, device):
                     if subparam._grad is not None:
                         subparam._grad.data = subparam._grad.data.to(device)
 
+
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
+
 
 def get_optimizer(conf, model):
     if conf['optimizer']['type'] == 'adam':
         return optim.Adam(model.parameters(),
                           lr=conf['optimizer']['lr'],
                           weight_decay=conf['optimizer']['weight_decay'])
+    elif conf['optimizer']['type'] == 'sgd':
+        return optim.SGD(model.parameters(), lr=conf['optimizer']['lr'], momentum=0.9)
     else:
         raise AttributeError("Unsupported optimizer in config file: {}".format(conf['optimizer']['type']))

@@ -45,7 +45,7 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_lo
         loss_name = 'MSE'
     else:
         loss_func = get_loss(conf)
-        loss_name = 'Loss'
+        loss_name = 'MAE'
 
     range_k = list(range(1, 33))
     for k_frames in range_k:
@@ -53,7 +53,6 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_lo
         # TODO: check if correct
         if conf['masking']['window_shift'] == 'None':
             conf['masking']['window_shift'] = conf['masking']['n_frames'] + k_frames
-        conf['load_weights'] = 'exp21-n=60 k={} s=90'.format(k_frames)
         logs = {}
         loss_meters = {'{}'.format(l): AverageValueMeter() for l in ['mean', 'last']}
         metrics = get_metrics(conf, conf['device'])

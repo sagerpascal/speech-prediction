@@ -7,7 +7,7 @@ from losses.soft_dtw import SoftDTW
 class SoftDTWWrapper(SoftDTW):
 
     def __init__(self, conf, gamma=1., length=None):
-        super().__init__(use_cuda=conf['device'] == "cuda", gamma=gamma)
+        super().__init__(use_cuda=conf['device'] == "cuda", gamma=gamma, normalize=True, dist_func=SoftDTW._abs_dist_func)
         self.conf = conf
         self.bs = conf['train']['batch_size']
         self.n_features = conf['data']['transform']['n_mels'] if conf['data']['type'] == 'mel-spectro' else \

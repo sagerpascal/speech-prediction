@@ -16,17 +16,30 @@ class Prenet(nn.Module):
         input_sizes = [input_size] + [hidden_size] * (num_layers - 1)
         output_sizes = [hidden_size] * num_layers
 
+        # self.layers = nn.ModuleList(
+        #     [nn.Linear(in_features=in_size, out_features=out_size)
+        #      for (in_size, out_size) in zip(input_sizes, output_sizes)])
+        #
+        # self.relu = nn.ReLU()
+        # self.dropout = nn.Dropout(dropout)
+
         self.layers = nn.ModuleList(
-            [nn.Linear(in_features=in_size, out_features=out_size)
+            [self.get_block(in_features=in_size, out_features=out_size, dropout=dropout)
              for (in_size, out_size) in zip(input_sizes, output_sizes)])
 
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(dropout)
+    def get_block(self, in_features, out_features, dropout):
+        return nn.Sequential(
+            nn.Linear(in_features=in_features, out_features=out_features),
+            nn.LeakyReLU(),
+            nn.Dropout(dropout),
+            nn.LayerNorm(out_features),
+        )
 
     def forward(self, inputs):
         # inputs: (batch_size, seq_len, mel_dim)
         for layer in self.layers:
-            inputs = self.dropout(self.relu(layer(inputs)))
+            # inputs = self.dropout(self.relu(layer(inputs)))
+            inputs = layer(inputs)
 
         return inputs
         # inputs: (batch_size, seq_len, out_dim)
@@ -42,12 +55,13 @@ class Postnet(nn.Module):
         super(Postnet, self).__init__()
         # TODO: cleanup
         self.layer_seq_len = nn.Linear(in_features=conf['masking']['n_frames'], out_features=conf['masking']['k_frames'])
+        self.activation = nn.LeakyReLU()
         self.layer_dim = nn.Conv1d(in_channels=input_size, out_channels=output_size, kernel_size=1, stride=1)
 
     def forward(self, inputs):
         # inputs: (batch_size, seq_len, hidden_size)
         inputs = torch.transpose(inputs, 1, 2)
-        inputs = self.layer_seq_len(inputs)
+        inputs = self.activation(self.layer_seq_len(inputs))
         # inputs: (batch_size, hidden_size, seq_len) -- for conv1d operation
 
         outputs = torch.transpose(self.layer_dim(inputs), 1, 2)

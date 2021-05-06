@@ -2,13 +2,12 @@ use_wandb: True
 
 # Environment
 env:
-  world_size: 2 # number of GPUs to run a batch in parallel
-
+  world_size: 1 # number of GPUs to run a batch in parallel
 # Mask MFCC
 masking:
   position: end # end, beginning or center
-  n_frames: 60 # max. number of input frames
-  k_frames: 30 # number of frames to predict
+  n_frames: 120 # max. number of input frames
+  k_frames: 20 # number of frames to predict
   window_shift: 1 # None = n_frames+k_frames
   start_idx: sliding-window # beginning (first n+k frames affected per file), random (n+k frames at random position per file), sliding-window (first n+k frames, then shift by n+k -> multiple frames per file)
 
@@ -36,13 +35,13 @@ model:
   apc:
     prenet:
       use_prenet: True
-      num_layers: 6
+#      num_layers: 7
       hidden_size: 512
       dropout: 0.1
     rnn:
       hidden_size: 512
-      num_layers: 5
-      dropout: 0.2
+#      num_layers: 5
+      dropout: 0.1
       use_residual: True
 
 

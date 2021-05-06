@@ -7,6 +7,7 @@ import pandas as pd
 import torch
 import torchaudio
 import logging
+import platform
 from torch.utils.data import Dataset
 from audio_datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform
 from audio_datasets.normalization import zero_norm, undo_zero_norm
@@ -18,6 +19,9 @@ logger = logging.getLogger(__name__)
 class AudioDatasetH5(Dataset):
 
     def __init__(self, conf, mode, h5_base_path='/workspace/data_pa/', with_waveform=False):
+
+        if platform.system() == "Windows":
+            h5_base_path = 'D:/Projekte/temporal-speech-context/data/'
 
         h5_base_path = Path(h5_base_path)
         meta_base_path = Path('audio_datasets/dfs')

@@ -1,8 +1,9 @@
-use_wandb: True
+use_wandb: False
 
 # Environment
 env:
   world_size: 1 # number of GPUs to run a batch in parallel
+
 # Mask MFCC
 masking:
   position: end # end, beginning or center
@@ -10,6 +11,7 @@ masking:
   k_frames: 20 # number of frames to predict
   window_shift: 1 # None = n_frames+k_frames
   start_idx: sliding-window # beginning (first n+k frames affected per file), random (n+k frames at random position per file), sliding-window (first n+k frames, then shift by n+k -> multiple frames per file)
+  add_metadata: True # add 2 dimensions with information about speaker and sentence
 
 # Dataset
 data:

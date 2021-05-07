@@ -5,7 +5,7 @@ import logging
 from torch.utils.data import Dataset
 from audio_datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform, get_frames_preprocess_fn
 from audio_datasets.normalization import zero_norm
-
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,14 @@ class AudioDataset(Dataset):
             self.dataset_length = 0
 
         else:
+            speakers_df = pd.read_csv(df_base_path / conf['data']['paths'].get('speakers'))
+            sentences_df = pd.read_csv(df_base_path / conf['data']['paths'].get('sentences'))
+            self.speaker_to_id = pd.Series(speakers_df.id.values, index=speakers_df.speaker).to_dict()
+            self.id_to_speaker = pd.Series(speakers_df.speaker.values, index=speakers_df.id).to_dict()
+            self.sentence_to_id = pd.Series(sentences_df.id.values, index=sentences_df.sentence).to_dict()
+            self.id_to_sentence = pd.Series(sentences_df.sentence.values, index=sentences_df.id).to_dict()
+            self.use_metadata = conf['masking']['add_metadata']
+
             self.df = pd.read_csv(df_fp)
 
             if conf['data']['type'] == 'raw':
@@ -111,6 +119,7 @@ class AudioDataset(Dataset):
 
         waveform = torchaudio.load(self.df['file_path'][index_dataframe])
         speaker = self.df['speaker'][index_dataframe]
+        sentence = self.df['sentence'][index_dataframe]
         complete_data = waveform[0]
 
         if self.transform is not None:
@@ -135,7 +144,14 @@ class AudioDataset(Dataset):
         else:
             data, target = self.preprocess(complete_data)
 
-        return data, target, complete_data, waveform[0], speaker
+        if self.use_metadata:
+            data_ = torch.ones(data.shape[0], data.shape[1] + 2, data.shape[2], dtype=torch.float32)
+            data_[:, :-2, :] = data
+            data_[:, -2, :] *= self.speaker_to_id[speaker]
+            data_[:, -1, :] *= self.sentence_to_id[sentence]
+            return data_, target, complete_data, waveform, speaker
+        else:
+            return data, target, complete_data, waveform, speaker
 
     def __len__(self):
         return self.dataset_length

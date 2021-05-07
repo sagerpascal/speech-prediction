@@ -260,6 +260,7 @@ def plot_one_predicted_batch(conf, loader_test, model):
         axs[1 + offset, 1].imshow(label_pr, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
         axs[1 + offset, 1].set_title("Prediction (MSE={})".format(mse))
         plt.tight_layout()
+        plt.savefig("eval/fearless-sea-46/{}.png".format(i))
         plt.show()
 
 
@@ -408,15 +409,15 @@ def evaluate(conf):
 
     conf['env']['world_size'] = 1
     conf['env']['use_data_parallel'] = False
-    _, _, loader_test = get_loaders(conf, device=conf['device'], with_waveform=False)
+    loader_test, _, _ = get_loaders(conf, device=conf['device'], with_waveform=False)
     loader_test.collate_fn = collate_fn_debug
     model = get_model(conf, conf['device'])
     metrics = get_metrics(conf, conf['device'])
 
     # calc_baseline(conf, compare_model=False, plot_best_results=False)
 
-    # plot_one_predicted_batch(conf, loader_test, model)
-    play_audio_files(conf, loader_test, model)
+    plot_one_predicted_batch(conf, loader_test, model)
+    # play_audio_files(conf, loader_test, model)
     # calc_metrics(conf, loader_test, model, metrics)
 
     # play_audio_files(conf, loader_test, None, with_prediction=False)

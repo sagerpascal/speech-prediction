@@ -97,16 +97,19 @@ class APCModel(nn.Module):
         feature_dim = conf['data']['transform']['n_mfcc'] if conf['data']['type'] == 'mfcc' else \
             conf['data']['transform']['n_mels']
 
+        feature_dim_in = feature_dim + 2 if conf['masking']['add_metadata'] else feature_dim
+        feature_dim_out = feature_dim
+
         if self.prenet_conf['use_prenet']:
             rnn_input_size = self.prenet_conf['hidden_size']
             assert rnn_input_size == self.rnn_conf['hidden_size']
             self.prenet = Prenet(
-                input_size=feature_dim,
+                input_size=feature_dim_in,
                 num_layers=self.prenet_conf['num_layers'],
                 hidden_size=self.prenet_conf['hidden_size'],
                 dropout=self.prenet_conf['dropout'])
         else:
-            rnn_input_size = feature_dim
+            rnn_input_size = feature_dim_in
             self.prenet = None
 
         in_sizes = ([rnn_input_size] +
@@ -122,7 +125,7 @@ class APCModel(nn.Module):
         self.postnet = Postnet(
             conf,
             input_size=self.rnn_conf['hidden_size'],
-            output_size=feature_dim)
+            output_size=feature_dim_out)
 
     def forward(self, inputs, target=None):
         """Forward function for both training and testing (feature extraction).

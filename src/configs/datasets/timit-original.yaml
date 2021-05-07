@@ -5,6 +5,8 @@ paths:
     train: timit-orig-train.csv
     val: timit-orig-val.csv
     test: timit-orig-test.csv
+  speakers: timit-speakers.csv
+  sentences: timit-sentences.csv
   mel-spectro:
     h5:
       train: TIMIT/timit_mel-spectro_train_dB-80.h5

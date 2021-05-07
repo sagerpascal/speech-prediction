@@ -66,6 +66,14 @@ class AudioDatasetH5(Dataset):
             logger.warning("Dataset for mode {} not defined".format(mode))
             self.dataset_length = 0
         else:
+            speakers_df = pd.read_csv(meta_base_path / conf['data']['paths'].get('speakers'))
+            sentences_df = pd.read_csv(meta_base_path / conf['data']['paths'].get('sentences'))
+            self.speaker_to_id = pd.Series(speakers_df.id.values, index=speakers_df.speaker).to_dict()
+            self.id_to_speaker = pd.Series(speakers_df.speaker.values, index=speakers_df.id).to_dict()
+            self.sentence_to_id = pd.Series(sentences_df.id.values, index=sentences_df.sentence).to_dict()
+            self.id_to_sentence = pd.Series(sentences_df.sentence.values, index=sentences_df.id).to_dict()
+            self.use_metadata = conf['masking']['add_metadata']
+
             self.metadata_df = pd.read_csv(md_fp)
 
             # std and mean from training set
@@ -161,7 +169,8 @@ class AudioDatasetH5(Dataset):
         else:
             waveform = None
 
-        speaker = self.metadata_df['Speaker'][index_dataframe]
+        speaker = self.metadata_df['speaker'][index_dataframe]
+        sentence = self.metadata_df['sentence'][index_dataframe]
 
         start_seq, end_seq = self.h5_file['META'][index_dataframe]
         assert start_idx >= start_seq and start_idx <= end_seq
@@ -189,7 +198,14 @@ class AudioDatasetH5(Dataset):
         else:
             data, target = self.preprocess(complete_data)
 
-        return data, target, complete_data, waveform, speaker
+        if self.use_metadata:
+            data_ = torch.ones(data.shape[0], data.shape[1]+2, data.shape[2], dtype=torch.float32)
+            data_[:, :-2, :] = data
+            data_[:, -2, :] *= self.speaker_to_id[speaker]
+            data_[:, -1, :] *= self.sentence_to_id[sentence]
+            return data_, target, complete_data, waveform, speaker
+        else:
+            return data, target, complete_data, waveform, speaker
 
     def __len__(self):
         return self.dataset_length

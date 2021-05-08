@@ -32,8 +32,8 @@ def get_config():
     parser.add_argument("--batch_size", default=32, help="The mini-batch size")
     parser.add_argument("--step_size", default=20, help="LR scheduler step size")
     parser.add_argument("--gamma", default=0.8, help="LR scheduler gamma")
-    parser.add_argument("--apc_num_prenet_layer", default=7, help="Number of prenet layers")
-    parser.add_argument("--apc_num_rnn_layer", default=5, help="Number of RNN layers")
+    parser.add_argument("--apc_num_prenet_layer", default=5, help="Number of prenet layers")
+    parser.add_argument("--apc_num_rnn_layer", default=4, help="Number of RNN layers")
     args = parser.parse_args()
 
     args_dict = {

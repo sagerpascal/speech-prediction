@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
 import torch
 import wandb
@@ -222,17 +223,17 @@ def calculate_average_logs(conf, store, train_logs, valid_logs):
     return train_logs_avg, valid_logs_avg
 
 
-def train(rank=None, world_size=None, conf=None):
+def train(rank=None, mport=None, store_port=None, world_size=None, conf=None):
     is_main_process = not conf['env']['use_data_parallel'] or conf['env']['use_data_parallel'] and rank == 0
 
     if conf['env']['use_data_parallel']:
         torch.cuda.manual_seed_all(42)
-        setup(rank, world_size)
+        setup(mport, rank, world_size)
         logger.info("Running DDP on rank {}".format(rank))
         device = rank
         model = get_model(conf, device)
         store = dist.TCPStore("127.0.0.1",
-                              port=1234,
+                              port=store_port,
                               world_size=conf['env']['world_size'],
                               is_master=is_main_process,
                               )
@@ -346,4 +347,9 @@ def train(rank=None, world_size=None, conf=None):
     if wandb_run is not None:
         wandb_run.finish()
 
+    dist.barrier()
+    del store
     cleanup()
+
+    if is_main_process:
+        time.sleep(10)  # wait for other processes to terminate

@@ -1,4 +1,5 @@
 import platform
+import random
 
 import torchaudio
 import logging
@@ -40,11 +41,11 @@ def main(n_frames=None, k_frames=None, window_shift=None):
         if conf['env']['use_data_parallel']:
             world_size = conf['env']['world_size']
             mp.spawn(train,
-                     args=(world_size, conf),
+                     args=(str(random.randint(12100, 65000)), random.randint(12100, 65000), world_size, conf),
                      nprocs=world_size,
                      join=True)
         else:
-            train(None, None, conf)
+            train(None, None, None, conf)
 
     elif conf['mode'] == "eval":
         evaluate(conf)

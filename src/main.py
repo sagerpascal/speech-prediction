@@ -1,13 +1,16 @@
+import logging
 import platform
 import random
 
+import numpy as np
+import torch
+import torch.multiprocessing as mp
 import torchaudio
-import logging
-from train import train
+
 from evaluate import evaluate
+from train import train
 from utils.conf_reader import get_config
 from utils.log import setup_logging
-import torch.multiprocessing as mp
 
 
 # TODO: Read https://github.com/stdm/stdm.github.io/blob/master/downloads/papers/CISP_2009.pdf
@@ -20,6 +23,10 @@ def init():
         torchaudio.set_audio_backend("soundfile")
     else:
         torchaudio.set_audio_backend("sox_io")
+
+    torch.manual_seed(0)
+    random.seed(0)
+    np.random.seed(0)
 
 
 def main(n_frames=None, k_frames=None, window_shift=None):

@@ -6,24 +6,25 @@ from torch.utils.data import Dataset
 from audio_datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform, get_frames_preprocess_fn
 from audio_datasets.normalization import zero_norm
 import torch
+import h5pickle
 
 logger = logging.getLogger(__name__)
 
 
-def get_mel_spectro_db_transform(conf):
-    mel_spectro_transform = get_mel_spectro_transform(conf).to('cpu')
-    to_db = torchaudio.transforms.AmplitudeToDB()
+class DbMelSpectroTransform:
 
-    def transform(data):
-        return to_db(mel_spectro_transform(data))
+    def __init__(self, conf):
+        self.conf = conf
+        self.mel_spectro_transform = get_mel_spectro_transform(conf).to('cpu')
+        self.to_db = torchaudio.transforms.AmplitudeToDB()
 
-    return transform
+    def __call__(self, data):
+        return self.to_db(self.mel_spectro_transform(data))
 
 
 class AudioDataset(Dataset):
 
     def __init__(self, conf, mode, df_base_path='audio_datasets/dfs', augmentation=None):
-
         self.conf = conf
         self.augmentation = augmentation
         df_base_path = Path(df_base_path)
@@ -42,6 +43,18 @@ class AudioDataset(Dataset):
             self.id_to_sentence = pd.Series(sentences_df.sentence.values, index=sentences_df.id).to_dict()
             self.use_metadata = conf['masking']['add_metadata']
 
+            try:
+                # use h5 file instead of multiple audio files if available for better performance
+                h5_raw_fp = Path('/workspace/data_pa/') / conf['data']['paths'].get('raw').get('h5').get(mode)
+                self.h5_raw_file = h5pickle.File(str(h5_raw_fp.resolve()), 'r', skip_cache=False)
+                h5_raw_md_fp = Path('audio_datasets/dfs') / conf['data']['paths']['raw']['h5']['metadata'][mode]
+                self.h5_raw_metadata_df = pd.read_csv(h5_raw_md_fp)
+                logger.info("Using h5-file instead of single audio files for better performance")
+            except Exception as e:
+                print(e)
+                self.h5_raw_file = None
+                self.h5_raw_metadata_df = None
+
             self.df = pd.read_csv(df_fp)
 
             if conf['data']['type'] == 'raw':
@@ -57,7 +70,7 @@ class AudioDataset(Dataset):
                 self.shape_len = 3
 
             elif conf['data']['type'] == 'mel-spectro':
-                self.transform = get_mel_spectro_db_transform(conf)
+                self.transform = DbMelSpectroTransform(conf)
                 self.length_key = 'mel_spectro_length'
                 self.use_norm = True
                 self.shape_len = 3
@@ -81,7 +94,7 @@ class AudioDataset(Dataset):
 
             # ignore all files < k_frames + n_frames
             self.df = self.df[self.df[self.length_key] >= (self.n_frames + self.k_frames)]
-            print("{} set has {} valid entries".format(mode, len(self.df)))
+            logger.info("{} set has {} valid entries".format(mode, len(self.df)))
 
             # calculate new index mapping if with sliding window
             if self.sliding_window:
@@ -109,10 +122,20 @@ class AudioDataset(Dataset):
         else:
             index_dataframe = item
 
-        waveform = torchaudio.load(self.df['file_path'][index_dataframe])
+        if self.h5_raw_file is not None and self.h5_raw_metadata_df is not None:
+            # start_idx_h5 = self.h5_raw_metadata_df['raw_start'][index_dataframe]
+            # end_idx_h5 = self.h5_raw_metadata_df['raw_end'][index_dataframe]
+            # TODO: this is only valid for new raw h5-files (distinguish between old and new files) and then copy this to dataset_h5
+            length_h5 = self.h5_raw_metadata_df['raw_length'][index_dataframe]
+            waveform = self.h5_raw_file['RAW'][index_dataframe, :length_h5]
+            waveform = torch.as_tensor(waveform, dtype=torch.float32)
+            complete_data = waveform.unsqueeze(0)
+        else:
+            waveform = torchaudio.load(self.df['file_path'][index_dataframe])
+            complete_data = waveform[0]
+
         speaker = self.df['speaker'][index_dataframe]
         sentence = self.df['sentence'][index_dataframe]
-        complete_data = waveform[0]
 
         if self.augmentation is not None:
             complete_data = self.augmentation(complete_data)

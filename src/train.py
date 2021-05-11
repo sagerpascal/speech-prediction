@@ -2,10 +2,10 @@ import logging
 import os
 import shutil
 import sys
-import time
 from pathlib import Path
 import torch
 import wandb
+import time
 from tqdm import tqdm
 from dataloader import get_loaders
 from losses.loss import get_loss
@@ -20,12 +20,6 @@ import torch.distributed as dist
 from utils.ddp import setup, cleanup
 
 logger = logging.getLogger(__name__)
-
-
-# TODO's:
-# cleanup code
-# Study mask of transformers -> can they be used to mask a certain area?
-# use torchaudio.functional.mask_along_axis to mask a certain area instead of own implementation
 
 
 class Epoch:
@@ -327,11 +321,10 @@ def train(rank=None, mport=None, store_port=None, world_size=None, conf=None):
                 filename = store.get("model_filename").decode("utf-8")
                 model.load_state_dict(torch.load(filename, map_location=map_location))
 
-        if (i+1) % conf['train']['backup_frequency'] == 0 and is_main_process:
+        if (i + 1) % conf['train']['backup_frequency'] == 0 and is_main_process:
             model_name = "{}_backup.pth".format(wandb.run.name) if conf['use_wandb'] else 'model_backup.pth'
             save_model(model, '/workspace/data_pa/trained_models', model_name, save_wandb=False)
             logger.info("Model saved as backup after {} epochs".format(i))
-
 
         if is_main_process and train_logs['loss'] < 0.0001 or conf['train'][
             'early_stopping'] and count_not_improved >= 5:

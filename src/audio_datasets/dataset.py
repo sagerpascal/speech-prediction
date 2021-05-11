@@ -16,9 +16,10 @@ logger = logging.getLogger(__name__)
 
 class AudioDataset(Dataset):
 
-    def __init__(self, conf, mode, df_base_path='audio_datasets/dfs'):
+    def __init__(self, conf, mode, df_base_path='audio_datasets/dfs', augmentation=None):
 
         self.conf = conf
+        self.augmentation = augmentation
         df_base_path = Path(df_base_path)
 
         if mode == 'train':
@@ -121,6 +122,9 @@ class AudioDataset(Dataset):
         speaker = self.df['speaker'][index_dataframe]
         sentence = self.df['sentence'][index_dataframe]
         complete_data = waveform[0]
+
+        if self.augmentation is not None:
+            complete_data = self.augmentation(complete_data)
 
         if self.transform is not None:
             complete_data = self.transform(complete_data)  # either mfcc or mel-spectrogram

@@ -8,12 +8,13 @@ from audio_datasets.collate import collate_fn
 from audio_datasets.dataset import AudioDataset
 from audio_datasets.dataset_h5 import AudioDatasetH5
 from audio_datasets.torch_speech_commands import SubsetSC
+from audio_datasets.data_augmentation import get_augmentation
 
 logger = logging.getLogger(__name__)
 
 def _get_loader(conf, train_set, val_set, test_set, rank=None):
     if "cuda" in conf['device']:
-        num_workers = 0 if platform.system() == "Windows" else 2
+        num_workers = 0 if platform.system() == "Windows" else 4
         pin_memory = True
     else:
         num_workers = 0
@@ -88,15 +89,20 @@ def _get_torch_speech_commands(conf, device):
 
 
 def _get_dataset(conf, device, with_waveform):
-    if conf['data'].get('paths').get(conf['data']['type']) is not None and conf['data'].get('paths').get(conf['data']['type']).get('h5') is not None:
+    if conf['data'].get('paths').get(conf['data']['type']) is not None \
+       and conf['data'].get('paths').get(conf['data']['type']).get('h5') is not None \
+       and not conf['data']['augmentation']['use_augmentation']:
         train_set = AudioDatasetH5(conf, mode='train', with_waveform=with_waveform)
         val_set = AudioDatasetH5(conf, mode='val', with_waveform=with_waveform)
         test_set = AudioDatasetH5(conf, mode='test', with_waveform=with_waveform)
     else:
-        logger.warning("Using slow dataset (single files instead of h5)")
-        train_set = AudioDataset(conf, mode='train')
-        val_set = AudioDataset(conf, mode='val')
-        test_set = AudioDataset(conf, mode='test')
+        if conf['data']['augmentation']['use_augmentation']:
+            logger.info('Using slow dataset (single files instead of h5), because data augmentation not supported for h5 files yet')
+        else:
+            logger.warning("Using slow dataset (single files instead of h5)")
+        train_set = AudioDataset(conf, mode='train', augmentation=get_augmentation(conf))
+        val_set = AudioDataset(conf, mode='val', augmentation=None)
+        test_set = AudioDataset(conf, mode='test', augmentation=None)
 
     # optional, e.g. not needed for pretraining set
     if len(test_set) == 0:

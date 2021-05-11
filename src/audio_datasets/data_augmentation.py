@@ -1,156 +1,144 @@
-import librosa
-import random
-import numpy as np
-
-import time
-import torch
 import math
+import random
+import time
 from pathlib import Path
 
-
-def get_check_size(conf):
-    min_size = math.ceil(
-        conf['data']['transform']['hop_length'] * (conf['masking']['n_frames'] + conf['masking']['k_frames'] - 1) + conf['data']['transform']['win_length'])
-
-    def check_size(data):
-        return data.size >= min_size
-
-    return check_size
+import librosa
+import numpy
+import numpy as np
+import torch
 
 
-def pitch_and_speed(conf):
-    lower = conf['data']['augmentation']['pitch_and_speed']['lower']
-    upper = conf['data']['augmentation']['pitch_and_speed']['upper']
-    prob = conf['data']['augmentation']['pitch_and_speed']['prob']
-    check_size_f = get_check_size(conf)
+class BaseAugmentation:
 
-    def apply(data):
-        if random.uniform(0, 1) <= prob:
-            data_aug = data.copy()
-            length_change = np.random.uniform(low=lower, high=upper)
-            speed_fac = 1.0 / length_change
-            tmp = np.interp(np.arange(0, len(data_aug), speed_fac), np.arange(0, len(data_aug)), data_aug)
-            minlen = min(data_aug.shape[0], tmp.shape[0])
-            data_aug *= 0
-            data_aug[0:minlen] = tmp[0:minlen]
-            if check_size_f(data_aug):
+    def __init__(self, conf, prob):
+        self.conf = conf
+        self.min_data_size = math.ceil(conf['data']['transform']['hop_length'] * (conf['masking']['n_frames'] +
+                                                                                  conf['masking']['k_frames'] - 1)
+                                       + conf['data']['transform']['win_length'])
+        self.prob = prob
+
+    def __call__(self, data):
+        if random.uniform(0, 1) <= self.prob:
+            data_aug = self.apply_augmentation(data)
+            if self.check_size(data_aug):
                 return data_aug
             else:
                 return data
         else:
             return data
 
-    return apply
+    def apply_augmentation(self, data):
+        raise NotImplementedError
+
+    def check_size(self, data):
+        return data.size >= self.min_data_size
 
 
-def pitch_shift(conf):
-    sampling_rate = conf['data']['transform']['sample_rate']
-    lower = conf['data']['augmentation']['pitch_shift']['lower']
-    upper = conf['data']['augmentation']['pitch_shift']['upper']
-    prob = conf['data']['augmentation']['pitch_shift']['prob']
-    check_size_f = get_check_size(conf)
+class PitchAndSpeedAugmentation(BaseAugmentation):
 
-    def apply(data):
-        if random.uniform(0, 1) <= prob:
-            n_steps = random.uniform(lower, upper)
-            data_aug = librosa.effects.pitch_shift(data, sampling_rate, n_steps=n_steps)
-            if check_size_f(data_aug):
-                return data_aug
-            else:
-                return data
-        else:
-            return data
+    def __init__(self, conf):
+        super().__init__(conf, prob=conf['data']['augmentation']['pitch_and_speed']['prob'])
+        self.lower = conf['data']['augmentation']['pitch_and_speed']['lower']
+        self.upper = conf['data']['augmentation']['pitch_and_speed']['upper']
 
-    return apply
+    def apply_augmentation(self, data):
+        data_aug = data.copy()
+        length_change = np.random.uniform(low=self.lower, high=self.upper)
+        speed_fac = 1.0 / length_change
+        tmp = np.interp(np.arange(0, len(data_aug), speed_fac), np.arange(0, len(data_aug)), data_aug)
+        minlen = min(data_aug.shape[0], tmp.shape[0])
+        data_aug *= 0
+        data_aug[0:minlen] = tmp[0:minlen]
+        return data_aug
 
 
-def time_stretch(conf):
-    lower = conf['data']['augmentation']['time_stretch']['lower']
-    upper = conf['data']['augmentation']['time_stretch']['upper']
-    prob = conf['data']['augmentation']['time_stretch']['prob']
-    check_size_f = get_check_size(conf)
+class PitchShiftAugmentation(BaseAugmentation):
 
-    def apply(data):
-        if random.uniform(0, 1) <= prob:
-            rate = random.uniform(lower, upper)
-            data_aug = librosa.effects.time_stretch(data, rate=rate)
-            if check_size_f(data_aug):
-                return data_aug
-            else:
-                return data
-        else:
-            return data
+    def __init__(self, conf):
+        super().__init__(conf, prob=conf['data']['augmentation']['pitch_shift']['prob'])
+        self.sampling_rate = conf['data']['transform']['sample_rate']
+        self.lower = conf['data']['augmentation']['pitch_shift']['lower']
+        self.upper = conf['data']['augmentation']['pitch_shift']['upper']
 
-    return apply
+    def apply_augmentation(self, data):
+        n_steps = random.uniform(self.lower, self.upper)
+        data_aug = librosa.effects.pitch_shift(data, self.sampling_rate, n_steps=n_steps)
+        return data_aug
 
 
-def value_ampl(conf):
-    lower = conf['data']['augmentation']['amplification']['lower']
-    upper = conf['data']['augmentation']['amplification']['upper']
-    prob = conf['data']['augmentation']['amplification']['prob']
-    check_size_f = get_check_size(conf)
+class TimeStretchAugmentation(BaseAugmentation):
 
-    def apply(data):
-        if random.uniform(0, 1) <= prob:
-            dyn_change = np.random.uniform(low=lower, high=upper)
-            data_aug = data * dyn_change
-            if check_size_f(data_aug):
-                return data_aug
-            else:
-                return data
-        else:
-            return data
+    def __init__(self, conf):
+        super().__init__(conf, prob=conf['data']['augmentation']['time_stretch']['prob'])
+        self.lower = conf['data']['augmentation']['time_stretch']['lower']
+        self.upper = conf['data']['augmentation']['time_stretch']['upper']
 
-    return apply
+    def apply_augmentation(self, data):
+        rate = random.uniform(self.lower, self.upper)
+        data_aug = librosa.effects.time_stretch(data, rate=rate)
+        return data_aug
 
 
-def hpss(conf):
-    prob = conf['data']['augmentation']['hpss']['prob']
+class ValueAmplificationAugmentation(BaseAugmentation):
 
-    def apply(data):
-        if random.uniform(0, 1) <= prob:
-            return librosa.effects.hpss(data)[1]
-        else:
-            return data
+    def __init__(self, conf):
+        super().__init__(conf, prob=conf['data']['augmentation']['amplification']['prob'])
+        self.lower = conf['data']['augmentation']['amplification']['lower']
+        self.upper = conf['data']['augmentation']['amplification']['upper']
 
-    return apply
+    def apply_augmentation(self, data):
+        dyn_change = np.random.uniform(low=self.lower, high=self.upper)
+        data_aug = data * dyn_change
+        return data_aug
 
 
-def augment_pipe(conf):
-    pitch_and_speed_f = pitch_and_speed(conf)
-    pitch_shift_f = pitch_shift(conf)
-    time_stretch_f = time_stretch(conf)
-    value_ampl_f = value_ampl(conf)
-    hpss_f = hpss(conf)
+class HpssAugmentation(BaseAugmentation):
 
-    def pipe(data):
+    def __init__(self, conf):
+        super().__init__(conf, prob=conf['data']['augmentation']['hpss']['prob'])
+
+    def apply_augmentation(self, data):
+        return librosa.effects.hpss(data)[1]
+
+
+class AugmentationPipeline:
+
+    def __init__(self, conf):
+        self.conf = conf
+        self.pitch_and_speed_augmentation = PitchAndSpeedAugmentation(conf)
+        self.time_stretch_augmentation = TimeStretchAugmentation(conf)
+        self.pitch_shift_augmentation = PitchShiftAugmentation(conf)
+        self.value_ampl_augmentation = ValueAmplificationAugmentation(conf)
+        self.hpss_augmentation = HpssAugmentation(conf)
+
+    def __call__(self, data):
         data = data.squeeze()
-        data = data.numpy()
+        if not isinstance(data, numpy.ndarray):
+            data = data.numpy()
         size = data.size  # size should stay the same...
-        data = pitch_and_speed_f(data)
-        data = time_stretch_f(data)
-        data = pitch_shift_f(data)
-        data = value_ampl_f(data)
-        data = hpss_f(data)
-        data_ = np.zeros(size, dtype=np.float)
+        data = self.pitch_and_speed_augmentation(data)
+        data = self.time_stretch_augmentation(data)
+        data = self.pitch_shift_augmentation(data)
+        data = self.value_ampl_augmentation(data)
+        data = self.hpss_augmentation(data)
+        data_ = np.zeros(size, dtype=float)
         if data.size <= size:
             # pad with zeros
             data_[:data.size] = data
         else:
             # cut out a random sequence
-            start_idx = random.randint(0, data.size-size)
+            start_idx = random.randint(0, data.size - size)
             data_[:] = data[start_idx:]
         assert data_.size == size
         data = torch.as_tensor(data_, dtype=torch.float32)
         data = data.unsqueeze(0)
         return data
 
-    return pipe
-
 
 def get_augmentation(conf):
     if conf['data']['augmentation']['use_augmentation']:
-        return augment_pipe(conf)
+        return AugmentationPipeline(conf)
     else:
         return None
 

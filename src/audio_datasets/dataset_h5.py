@@ -25,19 +25,9 @@ class AudioDatasetH5(Dataset):
 
         h5_base_path = Path(h5_base_path)
         meta_base_path = Path('audio_datasets/dfs')
-
         ds_fp = meta_base_path / conf['data']['paths']['df'][mode]
-        if conf['data']['type'] == 'raw':
-            h5_fp = h5_base_path / conf['data']['paths']['raw']['h5'][mode]
-            md_fp = meta_base_path / conf['data']['paths']['raw']['h5']['metadata'][mode]
-        elif conf['data']['type'] == 'mfcc':
-            h5_fp = h5_base_path / conf['data']['paths']['mfcc']['h5'][mode]
-            md_fp = meta_base_path / conf['data']['paths']['mfcc']['h5']['metadata'][mode]
-        elif conf['data']['type'] == 'mel-spectro':
-            h5_fp = h5_base_path / conf['data']['paths']['mel-spectro']['h5'][mode]
-            md_fp = meta_base_path / conf['data']['paths']['mel-spectro']['h5']['metadata'][mode]
-        else:
-            raise AttributeError("Unknown data type: {}".format(conf['data']['type']))
+        h5_fp = h5_base_path / conf['data']['paths'][conf['data']['type']]['h5'][mode]
+        md_fp = meta_base_path / conf['data']['paths'][conf['data']['type']]['h5']['metadata'][mode]
 
         if not md_fp.exists():
             logger.warning("Dataset for mode {} not defined".format(mode))

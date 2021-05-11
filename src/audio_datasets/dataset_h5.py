@@ -78,7 +78,7 @@ class AudioDatasetH5(Dataset):
                 self.use_norm = True
                 self.shape_len = 3
 
-            if self.use_norm and self.mean is None or self.std is None:
+            if self.use_norm and (self.mean is None or self.std is None):
                 logger.warning("Cannot use global normalization: Mean and/or Std not defined")
                 self.use_norm = False
 

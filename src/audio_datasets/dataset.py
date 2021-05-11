@@ -9,11 +9,6 @@ import torch
 
 logger = logging.getLogger(__name__)
 
-# http://www.openslr.org/12/
-# https://lionbridge.ai/datasets/best-speech-recognition-datasets-for-machine-learning/
-# https://www.sciencedirect.com/science/article/pii/S0885230819302712
-
-
 class AudioDataset(Dataset):
 
     def __init__(self, conf, mode, df_base_path='audio_datasets/dfs', augmentation=None):
@@ -21,15 +16,7 @@ class AudioDataset(Dataset):
         self.conf = conf
         self.augmentation = augmentation
         df_base_path = Path(df_base_path)
-
-        if mode == 'train':
-            df_fp = df_base_path / conf['data']['paths']['df']['train']
-        elif mode == 'val':
-            df_fp = df_base_path / conf['data']['paths']['df']['val']
-        elif mode == 'test':
-            df_fp = df_base_path / conf['data']['paths']['df']['test']
-        else:
-            raise AttributeError("Unknown mode: {}".format(mode))
+        df_fp = df_base_path / conf['data']['paths']['df'][mode]
 
         if not df_fp.exists():
             logger.warning("Dataset for mode {} not defined".format(mode))
@@ -73,10 +60,9 @@ class AudioDataset(Dataset):
                 self.shape_len = 3
                 self.to_db = torchaudio.transforms.AmplitudeToDB()
 
-            if self.use_norm:
-                if self.mean is None or self.std is None:
-                    logger.warning("Cannot use global normalization: Mean and/or Std not defined")
-                    self.use_norm = False
+            if self.use_norm and (self.mean is None or self.std is None):
+                logger.warning("Cannot use global normalization: Mean and/or Std not defined")
+                self.use_norm = False
 
             self.preprocess = get_frames_preprocess_fn(mask_pos=conf['masking']['position'],
                                                        n_frames=conf['masking']['n_frames'],

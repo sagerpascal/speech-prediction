@@ -7,6 +7,15 @@ paths:
     test: timit-orig-test.csv
   speakers: timit-speakers.csv
   sentences: timit-sentences.csv
+  raw:
+    h5:
+      train: TIMIT/timit_raw_train.h5
+      val: TIMIT/timit_raw_valid.h5
+      test: TIMIT/timit_raw_test.h5
+      metadata:
+        train: timit_raw_metadata_train.csv
+        val: timit_raw_metadata_valid.csv
+        test: timit_raw_metadata_test.csv
   mel-spectro:
     h5:
       train: TIMIT/timit_mel-spectro_train_dB-80.h5
@@ -18,6 +27,10 @@ paths:
         test: timit_mel_spectro_metadata_test_dB-80.csv
 
 stats:
+  raw:
+    train:
+      mean: 0.00000020026256208893756
+      std: 0.004097380209714174
   mel-spectro:
     train:
       mean: -33.92084503173828

@@ -55,28 +55,25 @@ class AudioDatasetH5(Dataset):
 
             # std and mean from training set
             if conf['data']['type'] == 'raw':
-                self.mean = conf['data'].get('stats').get('raw').get('train').get('mean')
-                self.std = conf['data'].get('stats').get('raw').get('train').get('std')
                 self.length_key, self.start_key, self.end_key = 'raw_length', 'raw_start', 'raw_end'
                 self.file_key = 'RAW'
                 self.use_norm = False
                 self.shape_len = 2
 
             elif conf['data']['type'] == 'mfcc':
-                self.mean = conf['data'].get('stats').get('mfcc').get('train').get('mean')
-                self.std = conf['data'].get('stats').get('mfcc').get('train').get('std')
                 self.length_key, self.start_key, self.end_key = 'MFCC_length', 'MFCC_start', 'MFCC_end'
                 self.file_key = 'MFCC'
                 self.use_norm = True
                 self.shape_len = 3
 
             elif conf['data']['type'] == 'mel-spectro':
-                self.mean = conf['data'].get('stats').get('mel-spectro').get('train').get('mean')
-                self.std = conf['data'].get('stats').get('mel-spectro').get('train').get('std')
                 self.length_key, self.start_key = 'mel_spectro_length', 'mel_spectro_start'
                 self.end_key, self.file_key = 'mel_spectro_end', 'Mel-Spectrogram'
                 self.use_norm = True
                 self.shape_len = 3
+
+            self.mean = conf['data'].get('stats').get(conf['data']['type']).get('train').get('mean')
+            self.std = conf['data'].get('stats').get(conf['data']['type']).get('train').get('std')
 
             if self.use_norm and (self.mean is None or self.std is None):
                 logger.warning("Cannot use global normalization: Mean and/or Std not defined")

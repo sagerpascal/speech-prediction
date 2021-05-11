@@ -9,6 +9,17 @@ import torch
 
 logger = logging.getLogger(__name__)
 
+
+def get_mel_spectro_db_transform(conf):
+    mel_spectro_transform = get_mel_spectro_transform(conf).to('cpu')
+    to_db = torchaudio.transforms.AmplitudeToDB()
+
+    def transform(data):
+        return to_db(mel_spectro_transform(data))
+
+    return transform
+
+
 class AudioDataset(Dataset):
 
     def __init__(self, conf, mode, df_base_path='audio_datasets/dfs', augmentation=None):
@@ -34,31 +45,25 @@ class AudioDataset(Dataset):
             self.df = pd.read_csv(df_fp)
 
             if conf['data']['type'] == 'raw':
-                self.mean = conf['data'].get('stats').get('raw').get('train').get('mean')
-                self.std = conf['data'].get('stats').get('raw').get('train').get('std')
                 self.transform = None
                 self.length_key = 'raw_length'
                 self.use_norm = False
                 self.shape_len = 2
-                self.to_db = None
 
             elif conf['data']['type'] == 'mfcc':
-                self.mean = conf['data'].get('stats').get('mfcc').get('train').get('mean')
-                self.std = conf['data'].get('stats').get('mfcc').get('train').get('std')
                 self.transform = get_mfcc_transform(conf).to('cuda')
                 self.length_key = 'MFCC_length'
                 self.use_norm = True
                 self.shape_len = 3
-                self.to_db = None
 
             elif conf['data']['type'] == 'mel-spectro':
-                self.mean = conf['data'].get('stats').get('mel-spectro').get('train').get('mean')
-                self.std = conf['data'].get('stats').get('mel-spectro').get('train').get('std')
-                self.transform = get_mel_spectro_transform(conf).to('cpu')
+                self.transform = get_mel_spectro_db_transform(conf)
                 self.length_key = 'mel_spectro_length'
                 self.use_norm = True
                 self.shape_len = 3
-                self.to_db = torchaudio.transforms.AmplitudeToDB()
+
+            self.mean = conf['data'].get('stats').get(conf['data']['type']).get('train').get('mean')
+            self.std = conf['data'].get('stats').get(conf['data']['type']).get('train').get('std')
 
             if self.use_norm and (self.mean is None or self.std is None):
                 logger.warning("Cannot use global normalization: Mean and/or Std not defined")
@@ -120,9 +125,6 @@ class AudioDataset(Dataset):
                 complete_data = complete_data[:, start_idx:end_idx]
             elif self.shape_len == 3:
                 complete_data = complete_data[:, :, start_idx:end_idx]
-
-        if self.to_db is not None:
-            complete_data = self.to_db(complete_data)
 
         if self.use_norm:
             complete_data = zero_norm(complete_data, self.mean, self.std)  # normalize

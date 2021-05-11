@@ -26,41 +26,18 @@ class AudioDatasetH5(Dataset):
         h5_base_path = Path(h5_base_path)
         meta_base_path = Path('audio_datasets/dfs')
 
-        if mode == 'train':
-            ds_fp = meta_base_path / conf['data']['paths']['df']['train']
-            if conf['data']['type'] == 'raw':
-                h5_fp = h5_base_path / conf['data']['paths']['raw']['h5']['train']
-                md_fp = meta_base_path / conf['data']['paths']['raw']['h5']['metadata']['train']
-            elif conf['data']['type'] == 'mfcc':
-                h5_fp = h5_base_path / conf['data']['paths']['mfcc']['h5']['train']
-                md_fp = meta_base_path / conf['data']['paths']['mfcc']['h5']['metadata']['train']
-            elif conf['data']['type'] == 'mel-spectro':
-                h5_fp = h5_base_path / conf['data']['paths']['mel-spectro']['h5']['train']
-                md_fp = meta_base_path / conf['data']['paths']['mel-spectro']['h5']['metadata']['train']
-        elif mode == 'val':
-            ds_fp = meta_base_path / conf['data']['paths']['df']['val']
-            if conf['data']['type'] == 'raw':
-                h5_fp = h5_base_path / conf['data']['paths']['raw']['h5']['val']
-                md_fp = meta_base_path / conf['data']['paths']['raw']['h5']['metadata']['val']
-            elif conf['data']['type'] == 'mfcc':
-                h5_fp = h5_base_path / conf['data']['paths']['mfcc']['h5']['val']
-                md_fp = meta_base_path / conf['data']['paths']['mfcc']['h5']['metadata']['val']
-            elif conf['data']['type'] == 'mel-spectro':
-                h5_fp = h5_base_path / conf['data']['paths']['mel-spectro']['h5']['val']
-                md_fp = meta_base_path / conf['data']['paths']['mel-spectro']['h5']['metadata']['val']
-        elif mode == 'test':
-            ds_fp = meta_base_path / conf['data']['paths']['df']['test']
-            if conf['data']['type'] == 'raw':
-                h5_fp = h5_base_path / conf['data']['paths']['raw']['h5']['test']
-                md_fp = meta_base_path / conf['data']['paths']['raw']['h5']['metadata']['test']
-            elif conf['data']['type'] == 'mfcc':
-                h5_fp = h5_base_path / conf['data']['paths']['mfcc']['h5']['test']
-                md_fp = meta_base_path / conf['data']['paths']['mfcc']['h5']['metadata']['test']
-            elif conf['data']['type'] == 'mel-spectro':
-                h5_fp = h5_base_path / conf['data']['paths']['mel-spectro']['h5']['test']
-                md_fp = meta_base_path / conf['data']['paths']['mel-spectro']['h5']['metadata']['test']
+        ds_fp = meta_base_path / conf['data']['paths']['df'][mode]
+        if conf['data']['type'] == 'raw':
+            h5_fp = h5_base_path / conf['data']['paths']['raw']['h5'][mode]
+            md_fp = meta_base_path / conf['data']['paths']['raw']['h5']['metadata'][mode]
+        elif conf['data']['type'] == 'mfcc':
+            h5_fp = h5_base_path / conf['data']['paths']['mfcc']['h5'][mode]
+            md_fp = meta_base_path / conf['data']['paths']['mfcc']['h5']['metadata'][mode]
+        elif conf['data']['type'] == 'mel-spectro':
+            h5_fp = h5_base_path / conf['data']['paths']['mel-spectro']['h5'][mode]
+            md_fp = meta_base_path / conf['data']['paths']['mel-spectro']['h5']['metadata'][mode]
         else:
-            raise AttributeError("Unknown mode: {}".format(mode))
+            raise AttributeError("Unknown data type: {}".format(conf['data']['type']))
 
         if not md_fp.exists():
             logger.warning("Dataset for mode {} not defined".format(mode))
@@ -84,8 +61,6 @@ class AudioDatasetH5(Dataset):
                 self.file_key = 'RAW'
                 self.use_norm = False
                 self.shape_len = 2
-                self.transform = get_mel_spectro_transform(conf)
-                self.to_db = None
 
             elif conf['data']['type'] == 'mfcc':
                 self.mean = conf['data'].get('stats').get('mfcc').get('train').get('mean')
@@ -94,7 +69,6 @@ class AudioDatasetH5(Dataset):
                 self.file_key = 'MFCC'
                 self.use_norm = True
                 self.shape_len = 3
-                self.to_db = None
 
             elif conf['data']['type'] == 'mel-spectro':
                 self.mean = conf['data'].get('stats').get('mel-spectro').get('train').get('mean')
@@ -103,13 +77,10 @@ class AudioDatasetH5(Dataset):
                 self.end_key, self.file_key = 'mel_spectro_end', 'Mel-Spectrogram'
                 self.use_norm = True
                 self.shape_len = 3
-                # self.to_db = torchaudio.transforms.AmplitudeToDB()
-                self.to_db = None
 
-            if self.use_norm:
-                if self.mean is None or self.std is None:
-                    logger.warning("Cannot use global normalization: Mean and/or Std not defined")
-                    self.use_norm = False
+            if self.use_norm and self.mean is None or self.std is None:
+                logger.warning("Cannot use global normalization: Mean and/or Std not defined")
+                self.use_norm = False
 
             self.preprocess = get_frames_preprocess_fn(mask_pos=conf['masking']['position'],
                                                        n_frames=conf['masking']['n_frames'],
@@ -183,9 +154,6 @@ class AudioDatasetH5(Dataset):
 
         complete_data = torch.from_numpy(complete_data)
 
-        if self.to_db is not None:
-            complete_data = self.to_db(complete_data)
-
         if self.use_norm:
             complete_data = zero_norm(complete_data, self.mean, self.std)
 
@@ -193,8 +161,6 @@ class AudioDatasetH5(Dataset):
             data, target = self.preprocess(complete_data.unsqueeze(0))
             data = data.squeeze(0)
             target = target.squeeze(0)
-            target = self.transform(target)
-
         else:
             data, target = self.preprocess(complete_data)
 

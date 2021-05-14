@@ -9,26 +9,25 @@ import torch
 
 logger = logging.getLogger(__name__)
 
-# http://www.openslr.org/12/
-# https://lionbridge.ai/datasets/best-speech-recognition-datasets-for-machine-learning/
-# https://www.sciencedirect.com/science/article/pii/S0885230819302712
+
+def get_mel_spectro_db_transform(conf):
+    mel_spectro_transform = get_mel_spectro_transform(conf).to('cpu')
+    to_db = torchaudio.transforms.AmplitudeToDB()
+
+    def transform(data):
+        return to_db(mel_spectro_transform(data))
+
+    return transform
 
 
 class AudioDataset(Dataset):
 
-    def __init__(self, conf, mode, df_base_path='audio_datasets/dfs'):
+    def __init__(self, conf, mode, df_base_path='audio_datasets/dfs', augmentation=None):
 
         self.conf = conf
+        self.augmentation = augmentation
         df_base_path = Path(df_base_path)
-
-        if mode == 'train':
-            df_fp = df_base_path / conf['data']['paths']['df']['train']
-        elif mode == 'val':
-            df_fp = df_base_path / conf['data']['paths']['df']['val']
-        elif mode == 'test':
-            df_fp = df_base_path / conf['data']['paths']['df']['test']
-        else:
-            raise AttributeError("Unknown mode: {}".format(mode))
+        df_fp = df_base_path / conf['data']['paths']['df'][mode]
 
         if not df_fp.exists():
             logger.warning("Dataset for mode {} not defined".format(mode))
@@ -46,36 +45,29 @@ class AudioDataset(Dataset):
             self.df = pd.read_csv(df_fp)
 
             if conf['data']['type'] == 'raw':
-                self.mean = conf['data'].get('stats').get('raw').get('train').get('mean')
-                self.std = conf['data'].get('stats').get('raw').get('train').get('std')
                 self.transform = None
                 self.length_key = 'raw_length'
                 self.use_norm = False
                 self.shape_len = 2
-                self.to_db = None
 
             elif conf['data']['type'] == 'mfcc':
-                self.mean = conf['data'].get('stats').get('mfcc').get('train').get('mean')
-                self.std = conf['data'].get('stats').get('mfcc').get('train').get('std')
                 self.transform = get_mfcc_transform(conf).to('cuda')
                 self.length_key = 'MFCC_length'
                 self.use_norm = True
                 self.shape_len = 3
-                self.to_db = None
 
             elif conf['data']['type'] == 'mel-spectro':
-                self.mean = conf['data'].get('stats').get('mel-spectro').get('train').get('mean')
-                self.std = conf['data'].get('stats').get('mel-spectro').get('train').get('std')
-                self.transform = get_mel_spectro_transform(conf).to('cpu')
+                self.transform = get_mel_spectro_db_transform(conf)
                 self.length_key = 'mel_spectro_length'
                 self.use_norm = True
                 self.shape_len = 3
-                self.to_db = torchaudio.transforms.AmplitudeToDB()
 
-            if self.use_norm:
-                if self.mean is None or self.std is None:
-                    logger.warning("Cannot use global normalization: Mean and/or Std not defined")
-                    self.use_norm = False
+            self.mean = conf['data'].get('stats').get(conf['data']['type']).get('train').get('mean')
+            self.std = conf['data'].get('stats').get(conf['data']['type']).get('train').get('std')
+
+            if self.use_norm and (self.mean is None or self.std is None):
+                logger.warning("Cannot use global normalization: Mean and/or Std not defined")
+                self.use_norm = False
 
             self.preprocess = get_frames_preprocess_fn(mask_pos=conf['masking']['position'],
                                                        n_frames=conf['masking']['n_frames'],
@@ -122,6 +114,9 @@ class AudioDataset(Dataset):
         sentence = self.df['sentence'][index_dataframe]
         complete_data = waveform[0]
 
+        if self.augmentation is not None:
+            complete_data = self.augmentation(complete_data)
+
         if self.transform is not None:
             complete_data = self.transform(complete_data)  # either mfcc or mel-spectrogram
 
@@ -130,9 +125,6 @@ class AudioDataset(Dataset):
                 complete_data = complete_data[:, start_idx:end_idx]
             elif self.shape_len == 3:
                 complete_data = complete_data[:, :, start_idx:end_idx]
-
-        if self.to_db is not None:
-            complete_data = self.to_db(complete_data)
 
         if self.use_norm:
             complete_data = zero_norm(complete_data, self.mean, self.std)  # normalize

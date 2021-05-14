@@ -52,7 +52,7 @@ def main(n_frames=None, k_frames=None, window_shift=None):
                      nprocs=world_size,
                      join=True)
         else:
-            train(None, None, None, conf)
+            train(None, None, None, None, conf)
 
     elif conf['mode'] == "eval":
         evaluate(conf)

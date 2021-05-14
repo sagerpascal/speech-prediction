@@ -107,6 +107,8 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_lo
                     s = format_logs(logs)
                     iterator.set_postfix_str(s)
 
+                    print("TODO: Undo zero-norm for plots!!!")
+
             mse_mean.append(logs['loss mean'])
             mse_last.append(logs['loss last'])
             if 'loss model' in logs:

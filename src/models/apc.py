@@ -30,7 +30,7 @@ class Prenet(nn.Module):
     def get_block(self, in_features, out_features, dropout):
         return nn.Sequential(
             nn.Linear(in_features=in_features, out_features=out_features),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Dropout(dropout),
             nn.LayerNorm(out_features),
         )
@@ -53,10 +53,11 @@ class Postnet(nn.Module):
 
     def __init__(self, conf, input_size, output_size):
         super(Postnet, self).__init__()
-        # TODO: cleanup
+        # TODO: test final bias
+        final_bias = conf['data']['stats'][conf['data']['type']]['train']['mean']
         self.layer_seq_len = nn.Linear(in_features=conf['masking']['n_frames'], out_features=conf['masking']['k_frames'])
-        self.activation = nn.LeakyReLU()
-        self.layer_dim = nn.Conv1d(in_channels=input_size, out_channels=output_size, kernel_size=1, stride=1)
+        self.activation = nn.ReLU()
+        self.layer_dim = nn.Conv1d(in_channels=input_size, out_channels=output_size, kernel_size=1, stride=1, bias=final_bias)
 
     def forward(self, inputs):
         # inputs: (batch_size, seq_len, hidden_size)

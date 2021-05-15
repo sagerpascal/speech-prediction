@@ -156,7 +156,6 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_lo
         plt.show()
 
 
-
 def calc_metrics(conf, loader_test, model, metrics):
     logs = {}
     loss_meter = AverageValueMeter()
@@ -169,6 +168,8 @@ def calc_metrics(conf, loader_test, model, metrics):
             x, y = x.to(conf['device']), y.to(conf['device'])
             with torch.no_grad():
                 y_pred = model.predict(x)  # model.forward(x, y)
+                if isinstance(y_pred, tuple):
+                    y_pred = y_pred[0]
                 loss = loss_func(y_pred, y)
 
                 # update logs: loss value
@@ -411,14 +412,14 @@ def evaluate(conf):
 
     conf['env']['world_size'] = 1
     conf['env']['use_data_parallel'] = False
-    loader_test, _, _ = get_loaders(conf, device=conf['device'], with_waveform=False)
+    _, _, loader_test = get_loaders(conf, device=conf['device'], with_waveform=False)
     loader_test.collate_fn = collate_fn_debug
-    model = get_model(conf, conf['device'])
-    metrics = get_metrics(conf, conf['device'])
+    # model = get_model(conf, conf['device'])
+    # metrics = get_metrics(conf, conf['device'])
 
-    # calc_baseline(conf, compare_model=False, plot_best_results=False)
+    calc_baseline(conf, compare_model=False, plot_best_results=False)
 
-    plot_one_predicted_batch(conf, loader_test, model)
+    # plot_one_predicted_batch(conf, loader_test, model)
     # play_audio_files(conf, loader_test, model)
     # calc_metrics(conf, loader_test, model, metrics)
 

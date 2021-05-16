@@ -2,12 +2,13 @@ import logging
 
 import torch
 
+from models.apc import APCModel
+from models.simple_cnn import SimpleCNN
 from models.transformer import CustomTransformer
 from models.unet import CustomUnet
-from models.simple_cnn import SimpleCNN
-from models.apc import APCModel
 
 logger = logging.getLogger(__name__)
+
 
 def get_model(conf, device):
     print("{} GPU's available".format(torch.cuda.device_count()))
@@ -30,7 +31,7 @@ def get_model(conf, device):
     else:
         raise AttributeError("Unknown Model in config file: {}".format(conf['model']['type']))
 
-    print(model)
+    # print(model)
     # print(summary(model.to(device), (1, 60, 128), 32))
     print("Model has {} parameters".format(count_parameters(model)))
 
@@ -56,7 +57,7 @@ def load_weights(net_config, model, rank=None):
         else:
             state_dict_single[k] = v
 
-    model.load_state_dict(state_dict_single, strict=True) # TODO: remove strict=False
+    model.load_state_dict(state_dict_single, strict=True)
 
 
 def count_parameters(model):

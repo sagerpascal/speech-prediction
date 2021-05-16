@@ -35,8 +35,21 @@ class BaseAugmentation:
         return data.size >= self.min_data_size
 
 
-class PitchAndSpeedAugmentation(BaseAugmentation):
+class ResampleAugmentation(BaseAugmentation):
+    def __init__(self, conf):
+        super().__init__(conf, prob=conf['data']['augmentation']['resample']['prob'])
+        self.sampling_rate = conf['data']['transform']['sample_rate']
+        self.lower = conf['data']['augmentation']['resample']['lower']
+        self.upper = conf['data']['augmentation']['resample']['upper']
 
+    def apply_augmentation(self, data):
+        factor = random.uniform(self.lower, self.upper)
+        data_aug = librosa.resample(data, self.sampling_rate, target_sr=int(self.sampling_rate*factor))
+        return data_aug
+
+
+class PitchAndSpeedAugmentation(BaseAugmentation):
+    """ Resample with linear interpolation """
     def __init__(self, conf):
         super().__init__(conf, prob=conf['data']['augmentation']['pitch_and_speed']['prob'])
         self.lower = conf['data']['augmentation']['pitch_and_speed']['lower']
@@ -53,33 +66,6 @@ class PitchAndSpeedAugmentation(BaseAugmentation):
         return data_aug
 
 
-class PitchShiftAugmentation(BaseAugmentation):
-
-    def __init__(self, conf):
-        super().__init__(conf, prob=conf['data']['augmentation']['pitch_shift']['prob'])
-        self.sampling_rate = conf['data']['transform']['sample_rate']
-        self.lower = conf['data']['augmentation']['pitch_shift']['lower']
-        self.upper = conf['data']['augmentation']['pitch_shift']['upper']
-
-    def apply_augmentation(self, data):
-        n_steps = random.uniform(self.lower, self.upper)
-        data_aug = librosa.effects.pitch_shift(data, self.sampling_rate, n_steps=n_steps)
-        return data_aug
-
-
-class TimeStretchAugmentation(BaseAugmentation):
-
-    def __init__(self, conf):
-        super().__init__(conf, prob=conf['data']['augmentation']['time_stretch']['prob'])
-        self.lower = conf['data']['augmentation']['time_stretch']['lower']
-        self.upper = conf['data']['augmentation']['time_stretch']['upper']
-
-    def apply_augmentation(self, data):
-        rate = random.uniform(self.lower, self.upper)
-        data_aug = librosa.effects.time_stretch(data, rate=rate)
-        return data_aug
-
-
 class ValueAmplificationAugmentation(BaseAugmentation):
 
     def __init__(self, conf):
@@ -89,39 +75,29 @@ class ValueAmplificationAugmentation(BaseAugmentation):
 
     def apply_augmentation(self, data):
         dyn_change = np.random.uniform(low=self.lower, high=self.upper)
-        data_aug = data * dyn_change
+        factors = []
+        for i in range(0, data.size, 1000):
+            factors.append(1000*[np.random.uniform(low=self.lower, high=self.upper)])
+        factors = np.array(factors).flatten()[:data.size]
+        data_aug = data * factors
         return data_aug
-
-
-class HpssAugmentation(BaseAugmentation):
-
-    def __init__(self, conf):
-        super().__init__(conf, prob=conf['data']['augmentation']['hpss']['prob'])
-
-    def apply_augmentation(self, data):
-        return librosa.effects.hpss(data)[1]
-
 
 class AugmentationPipeline:
 
     def __init__(self, conf):
         self.conf = conf
+        self.resample_augmentation = ResampleAugmentation(conf)
         self.pitch_and_speed_augmentation = PitchAndSpeedAugmentation(conf)
-        self.time_stretch_augmentation = TimeStretchAugmentation(conf)
-        self.pitch_shift_augmentation = PitchShiftAugmentation(conf)
         self.value_ampl_augmentation = ValueAmplificationAugmentation(conf)
-        self.hpss_augmentation = HpssAugmentation(conf)
 
     def __call__(self, data):
         data = data.squeeze()
         if not isinstance(data, numpy.ndarray):
             data = data.numpy()
         size = data.size  # size should stay the same...
+        data = self.resample_augmentation(data)
         data = self.pitch_and_speed_augmentation(data)
-        data = self.time_stretch_augmentation(data)
-        data = self.pitch_shift_augmentation(data)
         data = self.value_ampl_augmentation(data)
-        data = self.hpss_augmentation(data)
         data_ = np.zeros(size, dtype=float)
         if data.size <= size:
             # pad with zeros
@@ -129,7 +105,7 @@ class AugmentationPipeline:
         else:
             # cut out a random sequence
             start_idx = random.randint(0, data.size - size)
-            data_[:] = data[start_idx:]
+            data_[:] = data[start_idx:start_idx+size]
         assert data_.size == size
         data = torch.as_tensor(data_, dtype=torch.float32)
         data = data.unsqueeze(0)
@@ -152,27 +128,19 @@ if __name__ == '__main__':
     conf = {'data': {'augmentation': {
         'use_augmentation': True,
         'pitch_and_speed': {
-            'prob': 1.,  # 1
+            'prob': .5,  # 1
+            'lower': 0.7,  # .7
+            'upper': 1.3  # 1.3
+        },
+        'resample': {
+            'prob': .5,  # 1
             'lower': 0.7,
             'upper': 1.3
         },
-        'hpss': {
-            'prob': .1  # 0.1
-        },
         'amplification': {
-            'prob': 1.,  # 1
-            'lower': 0.8,
+            'prob': .8,  # 1
+            'lower': 0.8,  # 0.8
             'upper': 1.2
-        },
-        'time_stretch': {
-            'prob': 1.,  # 1
-            'lower': 1.,  # 1.
-            'upper': 1.01  # 1.01
-        },
-        'pitch_shift': {
-            'prob': 0.,
-            'lower': 0.99,
-            'upper': 1.01
         },
     }, 'transform': {'sample_rate': 16000, 'hop_length': 200, 'win_length': 400},
     },
@@ -190,16 +158,16 @@ if __name__ == '__main__':
                                                      )
     to_db = torchaudio.transforms.AmplitudeToDB()
 
-    for fp in Path('/Users/pascal/Documents/Projects/MSE/temporal-speech-context/data/').glob('**/*.WAV'):
+    for fp in Path('D:/Projekte/temporal-speech-context/data/tmp/').glob('**/14-212-0000.flac'):
         waveform = torchaudio.load(str(fp))[0]
 
         waveform_augmented = augmentation(waveform)
         mel_spectro = to_db(transform(waveform))
         mel_spectro_augmented = to_db(transform(waveform_augmented))
 
-        sd.play(waveform.T, conf['data']['transform']['sample_rate'], blocking=True)
-        time.sleep(0.5)
-        sd.play(waveform_augmented.T, conf['data']['transform']['sample_rate'], blocking=True)
+        # sd.play(waveform.T, conf['data']['transform']['sample_rate'], blocking=True)
+        # time.sleep(0.5)
+        # sd.play(waveform_augmented.T, conf['data']['transform']['sample_rate'], blocking=True)
 
         fig, ax = plt.subplots(nrows=4, figsize=(20, 10))
         ax[0].plot(waveform.numpy().T)

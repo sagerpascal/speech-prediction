@@ -8,7 +8,7 @@ env:
 masking:
   position: end # end, beginning or center
   n_frames: 120 # max. number of input frames
-  k_frames: 20 # number of frames to predict
+  k_frames: 25 # number of frames to predict
   window_shift: 1 # None = n_frames+k_frames
   start_idx: sliding-window # beginning (first n+k frames affected per file), random (n+k frames at random position per file), sliding-window (first n+k frames, then shift by n+k -> multiple frames per file)
   add_metadata: True # add 2 dimensions with information about speaker and sentence
@@ -18,25 +18,19 @@ data:
   type: mel-spectro # raw, mel-spectro or mfcc
   config_file: datasets/timit-original.yaml
   augmentation:
-    use_augmentation: True
+    use_augmentation: False
     pitch_and_speed:
-        prob: 1.
-        lower: 0.7
-        upper: 1.3
-    hpss:
-      prob: 0.1
+      prob: .5
+      lower: 0.7
+      upper: 1.3
+    resample:
+      prob: .5
+      lower: 0.7
+      upper: 1.3
     amplification:
-        prob: 1.
+        prob: .75
         lower: 0.8
         upper: 1.2
-    time_stretch:
-        prob: 1.
-        lower: 1.
-        upper: 1.01
-    pitch_shift:
-        prob: 0.
-        lower: 0.99
-        upper: 1.01
 
 # Model settings
 model:
@@ -70,7 +64,7 @@ model:
 # Training settings
 train:
   loss: mae # either mse, mae, mae-weighted or soft-dtw
-  max_number_of_epochs: 1000
+  max_number_of_epochs: 30
   early_stopping: False
   gradient_clipping:
     use_grad_clip: True

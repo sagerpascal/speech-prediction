@@ -7,14 +7,7 @@ from models.unet import CustomUnet
 from models.simple_cnn import SimpleCNN
 from models.apc import APCModel
 
-# mit TIMIT: https://github.com/hirofumi0810/neural_sp
-# mit TIMIT: https://github.com/okkteam/Transformer-Transducer
-# https://github.com/sooftware/Speech-Transformer
-# https://github.com/kaituoxu/Speech-Transformer
-# https://github.com/gentaiscool/end2end-asr-pytorch
-
 logger = logging.getLogger(__name__)
-
 
 def get_model(conf, device):
     print("{} GPU's available".format(torch.cuda.device_count()))

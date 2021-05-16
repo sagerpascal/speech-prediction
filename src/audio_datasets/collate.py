@@ -39,12 +39,15 @@ def collate_fn(batch):
 
 
 def collate_fn_debug(batch):
-    data_b, target_b, waveform_b, mfcc_b = [], [], [], []
-    for data, target, mfcc, waveform, *_ in batch:
+    data_b, target_b, waveform_b, mfcc_b, speaker_b, sentence_b, indexes_b = [], [], [], [], [], [], []
+    for data, target, mfcc, waveform, speaker, sentence, indexes in batch:
         data_b.append(data)
         target_b.append(target)
         mfcc_b.append(mfcc)
         waveform_b.append(waveform)
+        speaker_b.append(speaker)
+        sentence_b.append(sentence)
+        indexes_b.append(indexes)
 
     if len(data_b[0].shape) == 2:
         data_b = pad_mfcc_2d(data_b)
@@ -55,4 +58,4 @@ def collate_fn_debug(batch):
         target_b = pad_mfcc_3d(target_b)
         mfcc_b = pad_mfcc_3d(mfcc_b)
 
-    return data_b, target_b, mfcc_b, waveform_b
+    return data_b, target_b, mfcc_b, waveform_b, speaker_b, sentence_b, indexes_b

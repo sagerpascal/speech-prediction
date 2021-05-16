@@ -156,9 +156,9 @@ class AudioDatasetH5(Dataset):
             data_[:, :-2, :] = data
             data_[:, -2, :] *= self.speaker_to_id[speaker]
             data_[:, -1, :] *= self.sentence_to_id[sentence]
-            return data_, target, complete_data, waveform, speaker
+            return data_, target, complete_data, waveform, speaker, sentence, (index_dataframe, start_idx, end_idx)
         else:
-            return data, target, complete_data, waveform, speaker
+            return data, target, complete_data, waveform, speaker, sentence, (index_dataframe, start_idx, end_idx)
 
     def __len__(self):
         return self.dataset_length

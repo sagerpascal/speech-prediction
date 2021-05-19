@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from robust_loss_pytorch.adaptive import AdaptiveLossFunction
 
 from losses.soft_dtw import SoftDTW
 
@@ -7,7 +8,8 @@ from losses.soft_dtw import SoftDTW
 class SoftDTWWrapper(SoftDTW):
 
     def __init__(self, conf, gamma=1., length=None):
-        super().__init__(use_cuda=conf['device'] == "cuda", gamma=gamma, normalize=True, dist_func=SoftDTW._abs_dist_func)
+        super().__init__(use_cuda=conf['device'] == "cuda", gamma=gamma, normalize=True,
+                         dist_func=SoftDTW._abs_dist_func)
         self.conf = conf
         self.bs = conf['train']['batch_size']
         self.n_features = conf['data']['transform']['n_mels'] if conf['data']['type'] == 'mel-spectro' else \
@@ -38,7 +40,7 @@ class WeightedL1Loss(torch.nn.L1Loss):
             conf['data']['transform']['n_mels']
         self.seq_len = self.conf['masking']['n_frames']
         self.weight = self.calc_weights(
-            batch_size = self.batch_size,
+            batch_size=self.batch_size,
             seq_length=self.seq_len,
             n_dim=self.n_dim,
         )
@@ -61,6 +63,16 @@ class WeightedL1Loss(torch.nn.L1Loss):
         return torch.mean(loss)
 
 
+class AdaptiveLossFunctionWrapper(AdaptiveLossFunction):
+
+    def __init__(self, conf):
+        super(AdaptiveLossFunctionWrapper, self).__init__(num_dims=2000, float_dtype=torch.float32, device='cuda:0')
+        self.conf = conf
+
+    def forward(self, input, target):
+        return torch.mean(self.lossfun((input - target).flatten(start_dim=1)))
+
+
 def get_loss(conf):
     if conf['train']['loss'] == 'mse':
         return torch.nn.MSELoss()
@@ -70,5 +82,7 @@ def get_loss(conf):
         return WeightedL1Loss(conf)
     elif conf['train']['loss'] == 'soft-dtw':
         return SoftDTWWrapper(conf)
+    elif conf['train']['loss'] == 'adaptive-robust':
+        return AdaptiveLossFunctionWrapper(conf)
     else:
         raise AttributeError("Unknown loss")

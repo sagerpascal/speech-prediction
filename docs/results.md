@@ -32,124 +32,180 @@ This means that $$n + k$$ frames together consists of approx. 5 words.
 
 [1] Dumbali and Nagaraja, "Real Time Word Prediction Using N-Grams Model", 2019, International Journal of Innovative Technology and Exploring Engineering (IJITEE)
 
-### Simple Baseline MFCC
-The goal is to predict the $$k$$ following frames for $$n$$ given frames. In order to estimate in which range an MSE from a working network should lie, two simple baselines are defined:
+[comment]: <> (### Simple Baseline MFCC)
 
-- *Mean of previous $$n$$ frames:* The average value on the time axis of the $$k$$ given frames is calculated. This mean value is then used as prediction for all of the following $$k$$ values. 
-- *Last given frame:* The last given frame is used as prediction for all of the following $$n$$ values. This prediction is fairly good for the first frame, but quickly becomes inaccurate for predictions further away
+[comment]: <> (The goal is to predict the $$k$$ following frames for $$n$$ given frames. In order to estimate in which range an MSE from a working network should lie, two simple baselines are defined:)
+
+[comment]: <> (- *Mean of previous $$n$$ frames:* The average value on the time axis of the $$k$$ given frames is calculated. This mean value is then used as prediction for all of the following $$k$$ values. )
+
+[comment]: <> (- *Last given frame:* The last given frame is used as prediction for all of the following $$n$$ values. This prediction is fairly good for the first frame, but quickly becomes inaccurate for predictions further away)
+
+[comment]: <> (<p align="center">)
+
+[comment]: <> (      <img src="assets/results/baseline_predictions_s=150.png" alt="Results Baseline Predictions" width="70%" />)
+
+[comment]: <> (      <br>)
+
+[comment]: <> (      <i> Figure 2: The average value as prediction has a constant MSE of about 0.14. The last value, on the other hand, achieves a small MSE for the first few frames, but the MSE increases rapidly thereafter.</i>)
+
+[comment]: <> (</p>)
+
+[comment]: <> (A well-working neural network should be able to achieve better results than these baselines. This means that the MSE of the network should be smaller and in the lower right quadrant of the graph shown in figure 2.)
+
+[comment]: <> (### Baseline Network for Mel-Spectrogram)
+
+[comment]: <> (This repository mainly investigates the prediction of MFCC frames. However, in order to create a simple baseline with computer vision methods, Mel-Spectrograms were also used. The features of Mel-Spectrograms are highly dependent and therefore easier to predict with computer vision methods. Thereby, the principle is identical to the prediction of MFCCs, as shown in Figure 3.)
+
+[comment]: <> (<p align="center">)
+
+[comment]: <> (      <img src="assets/results/mel-spectrogram-example.png" alt="Example Mel-Spectrogram" width="70%" />)
+
+[comment]: <> (      <br>)
+
+[comment]: <> (      <i> Figure 3: A given Mel-Spectrogram &#40;upper plot&#41; is split into two sub-spectrograms: The first n frames are used as input data x &#40;lower left&#41; and the following k frames have to be predicted by the network &#40;lower right&#41;.</i>)
+
+[comment]: <> (</p>)
+
+[comment]: <> (The same baselines were calculated for the Mel-Spectrogram as done for the MFCC: The average value of the previous $$n$$ frames and the last given frame were used as prediction for the following $$k$$ frames. A neural network should be able to outperform these simple baseline approaches. )
+
+[comment]: <> (As a first approach, a U-Net++ was implemented. The U-Net++ is very well proven and usually achieves good results. The network used is a slight modification compared to the original version: An Efficientnet-b0 was used as the encoder. In total, the encoder and the decoder have a depth of $$d=5$$ and at the end, a linear layer maps the calculated prediction to the correct length.)
+
+[comment]: <> (To make pooling simpler to implement, powers of two were used as the input length $$n$$. Since the segment length $$s_{max}$$ should be smaller than $$150$$ &#40;i.e. $$s_{max} \leq 150$$&#41;, $$n=64$$ frames were used as input. Thus, more examples are available for training, but less context is available &#40;shorter segments given&#41;.)
+
+[comment]: <> (Figure 4 shows that this U-Net++ implementation was able to outperform the two simple baselines.)
+
+[comment]: <> (<p align="center">)
+
+[comment]: <> (      <img src="assets/results/baseline_predictions_mel-spectro_s=32.png" alt="Baseline Mel-Spectrogram" width="70%" />)
+
+[comment]: <> (      <br>)
+
+[comment]: <> (      <i> Figure 4: The prediction of the U-Net++ was better than the two simple baselines. However, the plot also shows that the network is overfitting on the training data.</i>)
+
+[comment]: <> (</p>)
+
+[comment]: <> (If only one frame has to be predicted &#40;$$k=1$$&#41;, then using the last given frame is considered a good prediction. This prediction has an average MSE of $$0.15$$. Therefore, predictions with a MSE $$\leq 0.15$$ are in general considered as good predictions. )
+
+[comment]: <> (However, the U-Net++ achieves such results only for very short sequences. Moreover, the results are not satisfactory when viewed visually or acoustically, despite the small MSE.)
+
+[comment]: <> (Figure 5 shows the predicted Mel-Spectrogram of the U-Net on the training set. The MSE was xxxxxxxxxx and therefore below the threshold of $$0.15$$.)
+
+[comment]: <> (The plot indicates that this prediction was not good despite the low MSE. Instead of the network predicting phenomes, it learns to create a "noise" with a low MSE. This suggests that the MSE is not necessarily a suitable loss function. This is examined in more detail in the following section.)
+
+[comment]: <> (> TODO: add plot / sound -> U-Net snowy-snow-17 on Training set)
+
+[comment]: <> (<p align="center">)
+
+[comment]: <> (      <img src="assets/results/todo_add_plot.png" alt="Predicted Mel-Spectrgramm" width="70%" />)
+
+[comment]: <> (      <br>)
+
+[comment]: <> (      <i> Figure 5: Prediction of 8 frames of a Mel-Spectrogram, created with a U-Net++ on the training set</i>)
+
+[comment]: <> (</p>)
+
+## Predictions
+The audio files from the TIMIT data set were converted to mel-spectrograms. Fixed length segments were then extracted from these Mel-spectrograms using a sliding window. The segments were split into two parts: The first part was fed into the model and used to predict the second part of the segment.
+This process is illustrated in figure 2.
 
 <p align="center">
-      <img src="assets/results/baseline_predictions_s=150.png" alt="Results Baseline Predictions" width="70%" />
+      <img src="assets/results/concept.PNG" alt="Concept" width="70%" />
       <br>
-      <i> Figure 2: The average value as prediction has a constant MSE of about 0.14. The last value, on the other hand, achieves a small MSE for the first few frames, but the MSE increases rapidly thereafter.</i>
+      <i> Figure 2</i>
 </p>
 
-A well-working neural network should be able to achieve better results than these baselines. This means that the MSE of the network should be smaller and in the lower right quadrant of the graph shown in figure 2.
+Some results are presented below. In these models, 120 frames were fed into the network and 25 frames were predicted.
+After that, the sliding window was moved forward by 1 frame and the process was repeated.
+The 25 predicted frames correspond approximately to one word. However, the quality of the prediction is difficult to determine based on only one word. Therefore, several predictions were composed. 
 
-### Baseline Network for Mel-Spectrogram
-This repository mainly investigates the prediction of MFCC frames. However, in order to create a simple baseline with computer vision methods, Mel-Spectrograms were also used. The features of Mel-Spectrograms are highly dependent and therefore easier to predict with computer vision methods. Thereby, the principle is identical to the prediction of MFCCs, as shown in Figure 3.
+The composition was done as follows: From a predicted sequence, the frame at the position `offset` was stored. Then the sliding window was moved shifted by 1 and the next frame at the position `offset` was saved.
+
+The prediction becomes of course more difficult if the `offset` is larger. For example, with an `offset=25`, 24 frames must first be predicted and then only the 25th predicted frame is stored. With a smaller `offset` less frames have to be predicted and thus the task becomes easier.
+
+The results are presented below. These are only the ground truth and the prediction -> the segment that was fed into the network is not visible.
+
+#### Speaker MRJM4, Sentence SA1
+
+Ground truth audio (resynthesized Mel-spectrogram):
 
 <p align="center">
-      <img src="assets/results/mel-spectrogram-example.png" alt="Example Mel-Spectrogram" width="70%" />
-      <br>
-      <i> Figure 3: A given Mel-Spectrogram (upper plot) is split into two sub-spectrograms: The first n frames are used as input data x (lower left) and the following k frames have to be predicted by the network (lower right).</i>
+      <audio controls>
+         <source src="assets/results/MRJM4-SA1/original.wav" type="audio/wav">
+      </audio>
 </p>
 
-The same baselines were calculated for the Mel-Spectrogram as done for the MFCC: The average value of the previous $$n$$ frames and the last given frame were used as prediction for the following $$k$$ frames. A neural network should be able to outperform these simple baseline approaches. 
 
-As a first approach, a U-Net++ was implemented. The U-Net++ is very well proven and usually achieves good results. The network used is a slight modification compared to the original version: An Efficientnet-b0 was used as the encoder. In total, the encoder and the decoder have a depth of $$d=5$$ and at the end, a linear layer maps the calculated prediction to the correct length.
+| `offset` | Ground Truth spectrogram | Predicted Spectrogram | Predicted Audio |
+|----------|--------------------------|-----------------------|-----------------|
+| 1        | <img src="assets/results/MRJM4-SA1/1-ahead_gt.png" width="25%" /> | <img src="assets/results/MRJM4-SA1/1-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MRJM4-SA1/1-ahead.wav" type="audio/wav"></audio> |
+| 5        | <img src="assets/results/MRJM4-SA1/5-ahead_gt.png" width="25%" /> | <img src="assets/results/MRJM4-SA1/5-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MRJM4-SA1/5-ahead.wav" type="audio/wav"></audio> |
+| 10       | <img src="assets/results/MRJM4-SA1/10-ahead_gt.png" width="25%" /> | <img src="assets/results/MRJM4-SA1/10-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MRJM4-SA1/10-ahead.wav" type="audio/wav"></audio> |
+| 20       | <img src="assets/results/MRJM4-SA1/20-ahead_gt.png" width="25%" /> | <img src="assets/results/MRJM4-SA1/20-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MRJM4-SA1/20-ahead.wav" type="audio/wav"></audio> |
+| 25       | <img src="assets/results/MRJM4-SA1/25-ahead_gt.png" width="25%" /> | <img src="assets/results/MRJM4-SA1/25-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MRJM4-SA1/25-ahead.wav" type="audio/wav"></audio> |
 
-To make pooling simpler to implement, powers of two were used as the input length $$n$$. Since the segment length $$s_{max}$$ should be smaller than $$150$$ (i.e. $$s_{max} \leq 150$$), $$n=64$$ frames were used as input. Thus, more examples are available for training, but less context is available (shorter segments given).
-Figure 4 shows that this U-Net++ implementation was able to outperform the two simple baselines.
+
+#### Speaker MJTH0, Sentence SA1 (Overfitted Model)
+
+*This model overfitted on the test data - but is for some sentences (such as this one) particularly good*
+
+Ground truth audio (resynthesized Mel-spectrogram):
 
 <p align="center">
-      <img src="assets/results/baseline_predictions_mel-spectro_s=32.png" alt="Baseline Mel-Spectrogram" width="70%" />
-      <br>
-      <i> Figure 4: The prediction of the U-Net++ was better than the two simple baselines. However, the plot also shows that the network is overfitting on the training data.</i>
+      <audio controls>
+         <source src="assets/results/MJTH0-SA1(overfitted)/original.wav" type="audio/wav">
+      </audio>
 </p>
 
-If only one frame has to be predicted ($$k=1$$), then using the last given frame is considered a good prediction. This prediction has an average MSE of $$0.15$$. Therefore, predictions with a MSE $$\leq 0.15$$ are in general considered as good predictions. 
-However, the U-Net++ achieves such results only for very short sequences. Moreover, the results are not satisfactory when viewed visually or acoustically, despite the small MSE.
-Figure 5 shows the predicted Mel-Spectrogram of the U-Net on the training set. The MSE was xxxxxxxxxx and therefore below the threshold of $$0.15$$.
-The plot indicates that this prediction was not good despite the low MSE. Instead of the network predicting phenomes, it learns to create a "noise" with a low MSE. This suggests that the MSE is not necessarily a suitable loss function. This is examined in more detail in the following section.
 
-> TODO: add plot / sound -> U-Net snowy-snow-17 on Training set
+| `offset` | Ground Truth spectrogram | Predicted Spectrogram | Predicted Audio |
+|----------|--------------------------|-----------------------|-----------------|
+| 1        | <img src="assets/results/MJTH0-SA1(overfitted)/1-ahead_gt.png" width="25%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/1-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/1-ahead.wav" type="audio/wav"></audio> |
+| 5        | <img src="assets/results/MJTH0-SA1(overfitted)/5-ahead_gt.png" width="25%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/5-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/5-ahead.wav" type="audio/wav"></audio> |
+| 10       | <img src="assets/results/MJTH0-SA1(overfitted)/10-ahead_gt.png" width="25%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/10-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/10-ahead.wav" type="audio/wav"></audio> |
+| 20       | <img src="assets/results/MJTH0-SA1(overfitted)/20-ahead_gt.png" width="25%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/20-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/20-ahead.wav" type="audio/wav"></audio> |
+| 25       | <img src="assets/results/MJTH0-SA1(overfitted)/25-ahead_gt.png" width="25%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/25-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/25-ahead.wav" type="audio/wav"></audio> |
+
+
+
+
+#### Speaker MCHH0, Sentence SA2
+
+Ground truth audio (resynthesized Mel-spectrogram):
 
 <p align="center">
-      <img src="assets/results/todo_add_plot.png" alt="Predicted Mel-Spectrgramm" width="70%" />
-      <br>
-      <i> Figure 5: Prediction of 8 frames of a Mel-Spectrogram, created with a U-Net++ on the training set</i>
+      <audio controls>
+         <source src="assets/results/MCHH0-SA2/original.wav" type="audio/wav">
+      </audio>
 </p>
 
-##### Why it is Challenging
-The TIMIT data set consists of different speakers saying the same sentences. Predicting the following words based on some given words would be easy if it would be text. This is because each word can be represented by a token. For audio files, however, this task is much more complex. A single word consists of several frames. In addition, each speaker pronounces the words differently (speed, pitch, glitches, pauses, mood, ...). Thus, the words cannot be represented by a token but by a 2D vector (features x time). 
 
-A typical phrase from the TIMIT data set is "She had your dark suit in greasy wash water all year". The entire data set was searched for two speakers who pronounce this sentence as identically as possible (pitch and timing). In addition, the files were trimmed so that they are as identical as possible. Figure 6 shows the Mel-Spectrogram of these two audio files.
+| `offset` | Ground Truth spectrogram | Predicted Spectrogram | Predicted Audio |
+|----------|--------------------------|-----------------------|-----------------|
+| 1        | <img src="assets/results/MCHH0-SA2/1-ahead_gt.png" width="25%" /> | <img src="assets/results/MCHH0-SA2/1-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MCHH0-SA2/1-ahead.wav" type="audio/wav"></audio> |
+| 5        | <img src="assets/results/MCHH0-SA2/5-ahead_gt.png" width="25%" /> | <img src="assets/results/MCHH0-SA2/5-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MCHH0-SA2/5-ahead.wav" type="audio/wav"></audio> |
+| 10       | <img src="assets/results/MCHH0-SA2/10-ahead_gt.png" width="25%" /> | <img src="assets/results/MCHH0-SA2/10-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MCHH0-SA2/10-ahead.wav" type="audio/wav"></audio> |
+| 20       | <img src="assets/results/MCHH0-SA2/20-ahead_gt.png" width="25%" /> | <img src="assets/results/MCHH0-SA2/20-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MCHH0-SA2/20-ahead.wav" type="audio/wav"></audio> |
+| 25       | <img src="assets/results/MCHH0-SA2/25-ahead_gt.png" width="25%" /> | <img src="assets/results/MCHH0-SA2/25-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MCHH0-SA2/25-ahead.wav" type="audio/wav"></audio> |
+
+
+#### Speaker FJLM0, Sentence SA2 (Overfitted Model)
+
+*This model overfitted on the test data - but is for some sentences (such as this one) particularly good*
+
+Ground truth audio (resynthesized Mel-spectrogram):
 
 <p align="center">
-      <img src="assets/results/speaker_comparison_male.png" alt="Mel-Spectrograms" width="70%" />
-      <br>
-      <i> Figure 6: The Mel-Spectrograms of two men saying the sentence "She had your dark suit in greasy wash water all year" as similar as possible.</i>
-</p>
-
-The MSE between these two spectrograms is $$0.3917$$, which is not too bad. However, the result of this prediction sounds good acoustically and looks good visually as well. This is remarkable because the MSE is larger than when a model is used for prediction. Although the MSE is much smaller when a model is used for prediction, their result is visually and acoustically worse.
-This indicated that the MSE is not necessarily a suitable metric for a loss function.
-
-To confirm this, the whole procedure was repeated. Figure 7 shows two more Mel-Spectrograms, which match well optically. 
-
-<p align="center">
-      <img src="assets/results/speaker_comparison_female.png" alt="Mel-Spectrograms" width="70%" />
-      <br>
-      <i> Figure 7: The Mel-Spectrograms of two women saying the sentence "She had your dark suit in greasy wash water all year" as similar as possible.</i>
-</p>
-
-These two spectrograms have an MSE of $$2.981$$. This is worse than simply taking the average of the previous frames as the prediction. 
-
-These two tests show that the MSE only cannot really be used to infer quality. With the MSE, individual features of frames are compared. Thus it can happen that a relatively good prediction (i.e. a very similar sequence) has a much larger MSE than the prediction of a simple model (i.e. average value or U-Net). The MSE is larger, although the prediction is visually as well as acoustically better. This suggests that the MSE it not necessarily a good loss function.
-
-##### Soft Dynamic Time Wrapping (Soft-DTW)
-Soft-DTW [1] was used as an alternative loss function to MSE. Unlike the Euclidean distance, DTW can compare time series of variable size and is robust to shifts or dilatations across the time dimension.
-Soft-DTW solves the soft minimal-cost alignment problem between two time series. Compared to DTW, soft-DTW has a regularizazion parameter $$\gamma$$.
-
-
-The table below compares the MSE loss with the Soft-DTW loss for a prediction of $$k=32$$ frames. The first two columns contain the loss for the two baselines "Last Frame" and "Average". 
-As shown in figure 4, using the average is the better baseline if $$k > 5$$ frames are predicted. 
-The 3rd column shows the loss for the figure 6, if the second Mel-specotrgram is used as prediction for the first spectrogram, and the 4th column shows the same for the figure 7.
-
-
-| Loss 32 Frames | Loss Last Frame | Loss Average | Loss Diff. Fig. 6 | Loss Diff. Fig. 7 |
-|---------------|-----------------|--------------|-------------------|-------------------|
-| MSE           | $$ 1.451 $$ | $$ 0.708 $$ | $$0.3917$$ $$(55.32\%)$$ | $$2.981$$ $$(421\%)$$ | 
-| Soft-DTW $$\gamma=0.1$$ | $$5940$$ | $$2899$$ | $$1492.8$$ $$(51.49\%)$$ | $$11269.1$$ $$(388.7\%)$$  |
-| Soft-DTW $$\gamma=1.0$$ | $$5912$$ | $$2878$$ | $$1466.2$$ $$(50.91\%)$$ | $$11294.1$$ $$(392.4\%)$$ |
-
-The loss must be small for two very similar predictions. In order that the network cannot simply learn a simple baseline such as the average value, the loss must also be smaller than these baselines. This is the case for Figure 6: In the table, the brackets show how much larger the loss is compared to the better baseline. For Figure 7, however, this is far from being the case. This is considered as one of the difficulties of these predictions: If in this case the network only predicted the average, it would be much better. 
-
-The table shows that the soft-DTW relaxes this problem a bit. However, neither this loss has yet brought a breakthrough and the predictions are still very poor (visually as well as acoustically), although the performance is better than the average value.
-
-Figure 8 shows a prediction of the U-Net++ on the training data. The original Spectrogram (upper left) was divided into a given segment (upper right) and a segment to predict (lower left). The prediction of the U-Net++ looks still different (lower right) compared to the ground truth.
-This is of course because the prediction is not complete accurate, but also due to the fact that spectrograms are converted to dB scale for plotting.
-However, the plot also indicated that the model is learning some features, this is for exampe visible by the high energy contribution to the lower frequencies.
-
-
-<p align="center">
-    <img src="assets/results/result_mfcc_soft-dtw.png" alt="MSE training set" width="70%" />
-    <br>
-    <i> Figure 8: The input, ground truth and predicted Mel-spectrogram of a U-Net++ using the Soft-DTW loss (converted to dB units).</i>
+      <audio controls>
+         <source src="assets/results/FJLM0-SA2(overfitted)/original.wav" type="audio/wav">
+      </audio>
 </p>
 
 
+| `offset` | Ground Truth spectrogram | Predicted Spectrogram | Predicted Audio |
+|----------|--------------------------|-----------------------|-----------------|
+| 1        | <img src="assets/results/FJLM0-SA2(overfitted)/1-ahead_gt.png" width="25%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/1-ahead.png" width="25%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/1-ahead.wav" type="audio/wav"></audio> |
+| 5        | <img src="assets/results/FJLM0-SA2(overfitted)/5-ahead_gt.png" width="25%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/5-ahead.png" width="25%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/5-ahead.wav" type="audio/wav"></audio> |
+| 10       | <img src="assets/results/FJLM0-SA2(overfitted)/10-ahead_gt.png" width="25%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/10-ahead.png" width="25%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/10-ahead.wav" type="audio/wav"></audio> |
+| 20       | <img src="assets/results/FJLM0-SA2(overfitted)/20-ahead_gt.png" width="25%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/20-ahead.png" width="25%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/20-ahead.wav" type="audio/wav"></audio> |
+| 25       | <img src="assets/results/FJLM0-SA2(overfitted)/25-ahead_gt.png" width="25%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/25-ahead.png" width="25%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/25-ahead.wav" type="audio/wav"></audio> |
 
-##### U-Net++ vs. Transformer
-Another interesting comparison is the difference between the U-Net++ and a Transformer network. The Transformer network learns faster (i.e. training loss is reduced faster), but has a higher loss on the validation set as shown in figure 9.
-
-<p align="center">
-    <img src="assets/results/MSE_train_tf-un.svg" alt="MSE training set" width="35%" />
-    <img src="assets/results/MSE_test_tf-un.svg" alt="MSE validation set" width="35%" />
-    <br>
-    <i> Figure 9: The plot on the left shows the training loss (i.e. MSE) and the plot on the right the loss on the validation set. The Transformer network has a much steeper learning curve but overfits more than the U-Net++.</i>
-</p>
-
-
-
-- [1] Cuturi and Blondel, Soft-DTW: a Differentiable Loss Function for Time-Series, 2017, ICML

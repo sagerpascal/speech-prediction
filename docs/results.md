@@ -137,11 +137,11 @@ Ground truth audio (resynthesized Mel-spectrogram):
 
 | `offset` | Ground Truth spectrogram | Predicted Spectrogram | Predicted Audio |
 |----------|--------------------------|-----------------------|-----------------|
-| 1        | <img src="assets/results/MRJM4-SA1/1-ahead_gt.png" width="25%" /> | <img src="assets/results/MRJM4-SA1/1-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MRJM4-SA1/1-ahead.wav" type="audio/wav"></audio> |
-| 5        | <img src="assets/results/MRJM4-SA1/5-ahead_gt.png" width="25%" /> | <img src="assets/results/MRJM4-SA1/5-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MRJM4-SA1/5-ahead.wav" type="audio/wav"></audio> |
-| 10       | <img src="assets/results/MRJM4-SA1/10-ahead_gt.png" width="25%" /> | <img src="assets/results/MRJM4-SA1/10-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MRJM4-SA1/10-ahead.wav" type="audio/wav"></audio> |
-| 20       | <img src="assets/results/MRJM4-SA1/20-ahead_gt.png" width="25%" /> | <img src="assets/results/MRJM4-SA1/20-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MRJM4-SA1/20-ahead.wav" type="audio/wav"></audio> |
-| 25       | <img src="assets/results/MRJM4-SA1/25-ahead_gt.png" width="25%" /> | <img src="assets/results/MRJM4-SA1/25-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MRJM4-SA1/25-ahead.wav" type="audio/wav"></audio> |
+| 1        | <img src="assets/results/MRJM4-SA1/1-ahead_gt.png" width="50%" /> | <img src="assets/results/MRJM4-SA1/1-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MRJM4-SA1/1-ahead.wav" type="audio/wav"></audio> |
+| 5        | <img src="assets/results/MRJM4-SA1/5-ahead_gt.png" width="50%" /> | <img src="assets/results/MRJM4-SA1/5-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MRJM4-SA1/5-ahead.wav" type="audio/wav"></audio> |
+| 10       | <img src="assets/results/MRJM4-SA1/10-ahead_gt.png" width="50%" /> | <img src="assets/results/MRJM4-SA1/10-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MRJM4-SA1/10-ahead.wav" type="audio/wav"></audio> |
+| 20       | <img src="assets/results/MRJM4-SA1/20-ahead_gt.png" width="50%" /> | <img src="assets/results/MRJM4-SA1/20-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MRJM4-SA1/20-ahead.wav" type="audio/wav"></audio> |
+| 25       | <img src="assets/results/MRJM4-SA1/25-ahead_gt.png" width="50%" /> | <img src="assets/results/MRJM4-SA1/25-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MRJM4-SA1/25-ahead.wav" type="audio/wav"></audio> |
 
 
 #### Speaker MJTH0, Sentence SA1 (Overfitted Model)
@@ -159,11 +159,11 @@ Ground truth audio (resynthesized Mel-spectrogram):
 
 | `offset` | Ground Truth spectrogram | Predicted Spectrogram | Predicted Audio |
 |----------|--------------------------|-----------------------|-----------------|
-| 1        | <img src="assets/results/MJTH0-SA1(overfitted)/1-ahead_gt.png" width="25%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/1-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/1-ahead.wav" type="audio/wav"></audio> |
-| 5        | <img src="assets/results/MJTH0-SA1(overfitted)/5-ahead_gt.png" width="25%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/5-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/5-ahead.wav" type="audio/wav"></audio> |
-| 10       | <img src="assets/results/MJTH0-SA1(overfitted)/10-ahead_gt.png" width="25%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/10-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/10-ahead.wav" type="audio/wav"></audio> |
-| 20       | <img src="assets/results/MJTH0-SA1(overfitted)/20-ahead_gt.png" width="25%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/20-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/20-ahead.wav" type="audio/wav"></audio> |
-| 25       | <img src="assets/results/MJTH0-SA1(overfitted)/25-ahead_gt.png" width="25%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/25-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/25-ahead.wav" type="audio/wav"></audio> |
+| 1        | <img src="assets/results/MJTH0-SA1(overfitted)/1-ahead_gt.png" width="50%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/1-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/1-ahead.wav" type="audio/wav"></audio> |
+| 5        | <img src="assets/results/MJTH0-SA1(overfitted)/5-ahead_gt.png" width="50%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/5-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/5-ahead.wav" type="audio/wav"></audio> |
+| 10       | <img src="assets/results/MJTH0-SA1(overfitted)/10-ahead_gt.png" width="50%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/10-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/10-ahead.wav" type="audio/wav"></audio> |
+| 20       | <img src="assets/results/MJTH0-SA1(overfitted)/20-ahead_gt.png" width="50%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/20-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/20-ahead.wav" type="audio/wav"></audio> |
+| 25       | <img src="assets/results/MJTH0-SA1(overfitted)/25-ahead_gt.png" width="50%" /> | <img src="assets/results/MJTH0-SA1(overfitted)/25-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MJTH0-SA1(overfitted)/25-ahead.wav" type="audio/wav"></audio> |
 
 
 
@@ -181,11 +181,11 @@ Ground truth audio (resynthesized Mel-spectrogram):
 
 | `offset` | Ground Truth spectrogram | Predicted Spectrogram | Predicted Audio |
 |----------|--------------------------|-----------------------|-----------------|
-| 1        | <img src="assets/results/MCHH0-SA2/1-ahead_gt.png" width="25%" /> | <img src="assets/results/MCHH0-SA2/1-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MCHH0-SA2/1-ahead.wav" type="audio/wav"></audio> |
-| 5        | <img src="assets/results/MCHH0-SA2/5-ahead_gt.png" width="25%" /> | <img src="assets/results/MCHH0-SA2/5-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MCHH0-SA2/5-ahead.wav" type="audio/wav"></audio> |
-| 10       | <img src="assets/results/MCHH0-SA2/10-ahead_gt.png" width="25%" /> | <img src="assets/results/MCHH0-SA2/10-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MCHH0-SA2/10-ahead.wav" type="audio/wav"></audio> |
-| 20       | <img src="assets/results/MCHH0-SA2/20-ahead_gt.png" width="25%" /> | <img src="assets/results/MCHH0-SA2/20-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MCHH0-SA2/20-ahead.wav" type="audio/wav"></audio> |
-| 25       | <img src="assets/results/MCHH0-SA2/25-ahead_gt.png" width="25%" /> | <img src="assets/results/MCHH0-SA2/25-ahead.png" width="25%" /> | <audio controls><source src="assets/results/MCHH0-SA2/25-ahead.wav" type="audio/wav"></audio> |
+| 1        | <img src="assets/results/MCHH0-SA2/1-ahead_gt.png" width="50%" /> | <img src="assets/results/MCHH0-SA2/1-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MCHH0-SA2/1-ahead.wav" type="audio/wav"></audio> |
+| 5        | <img src="assets/results/MCHH0-SA2/5-ahead_gt.png" width="50%" /> | <img src="assets/results/MCHH0-SA2/5-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MCHH0-SA2/5-ahead.wav" type="audio/wav"></audio> |
+| 10       | <img src="assets/results/MCHH0-SA2/10-ahead_gt.png" width="50%" /> | <img src="assets/results/MCHH0-SA2/10-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MCHH0-SA2/10-ahead.wav" type="audio/wav"></audio> |
+| 20       | <img src="assets/results/MCHH0-SA2/20-ahead_gt.png" width="50%" /> | <img src="assets/results/MCHH0-SA2/20-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MCHH0-SA2/20-ahead.wav" type="audio/wav"></audio> |
+| 25       | <img src="assets/results/MCHH0-SA2/25-ahead_gt.png" width="50%" /> | <img src="assets/results/MCHH0-SA2/25-ahead.png" width="50%" /> | <audio controls><source src="assets/results/MCHH0-SA2/25-ahead.wav" type="audio/wav"></audio> |
 
 
 #### Speaker FJLM0, Sentence SA2 (Overfitted Model)
@@ -203,9 +203,9 @@ Ground truth audio (resynthesized Mel-spectrogram):
 
 | `offset` | Ground Truth spectrogram | Predicted Spectrogram | Predicted Audio |
 |----------|--------------------------|-----------------------|-----------------|
-| 1        | <img src="assets/results/FJLM0-SA2(overfitted)/1-ahead_gt.png" width="25%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/1-ahead.png" width="25%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/1-ahead.wav" type="audio/wav"></audio> |
-| 5        | <img src="assets/results/FJLM0-SA2(overfitted)/5-ahead_gt.png" width="25%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/5-ahead.png" width="25%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/5-ahead.wav" type="audio/wav"></audio> |
-| 10       | <img src="assets/results/FJLM0-SA2(overfitted)/10-ahead_gt.png" width="25%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/10-ahead.png" width="25%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/10-ahead.wav" type="audio/wav"></audio> |
-| 20       | <img src="assets/results/FJLM0-SA2(overfitted)/20-ahead_gt.png" width="25%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/20-ahead.png" width="25%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/20-ahead.wav" type="audio/wav"></audio> |
-| 25       | <img src="assets/results/FJLM0-SA2(overfitted)/25-ahead_gt.png" width="25%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/25-ahead.png" width="25%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/25-ahead.wav" type="audio/wav"></audio> |
+| 1        | <img src="assets/results/FJLM0-SA2(overfitted)/1-ahead_gt.png" width="50%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/1-ahead.png" width="50%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/1-ahead.wav" type="audio/wav"></audio> |
+| 5        | <img src="assets/results/FJLM0-SA2(overfitted)/5-ahead_gt.png" width="50%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/5-ahead.png" width="50%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/5-ahead.wav" type="audio/wav"></audio> |
+| 10       | <img src="assets/results/FJLM0-SA2(overfitted)/10-ahead_gt.png" width="50%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/10-ahead.png" width="50%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/10-ahead.wav" type="audio/wav"></audio> |
+| 20       | <img src="assets/results/FJLM0-SA2(overfitted)/20-ahead_gt.png" width="50%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/20-ahead.png" width="50%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/20-ahead.wav" type="audio/wav"></audio> |
+| 25       | <img src="assets/results/FJLM0-SA2(overfitted)/25-ahead_gt.png" width="50%" /> | <img src="assets/results/FJLM0-SA2(overfitted)/25-ahead.png" width="50%" /> | <audio controls><source src="assets/results/FJLM0-SA2(overfitted)/25-ahead.wav" type="audio/wav"></audio> |
 

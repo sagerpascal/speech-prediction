@@ -7,16 +7,17 @@ env:
 # Mask MFCC
 masking:
   position: end # end, beginning or center
-  n_frames: 120 # max. number of input frames
+  n_frames: 50 # max. number of input frames
   k_frames: 25 # number of frames to predict
   window_shift: 1 # None = n_frames+k_frames
-  start_idx: sliding-window # beginning (first n+k frames affected per file), random (n+k frames at random position per file), sliding-window (first n+k frames, then shift by n+k -> multiple frames per file)
-  add_metadata: True # add 2 dimensions with information about speaker and sentence
+  start_idx: full # beginning (first n+k frames affected per file), random (n+k frames at random position per file), sliding-window (first n+k frames, then shift by n+k -> multiple frames per file), full = whole file
+  add_metadata: False # add 2 dimensions with information about speaker and sentence
 
 # Dataset
 data:
   type: mel-spectro # raw, mel-spectro or mfcc
   config_file: datasets/timit-original.yaml
+  use_subset: False
   augmentation:
     use_augmentation: False
     pitch_and_speed:
@@ -60,11 +61,10 @@ model:
       dropout: 0.3
       use_residual: True
 
-
 # Training settings
 train:
-  loss: mae # either mse, mae, mae-weighted or soft-dtw
-  max_number_of_epochs: 30
+  loss: mae # either mse, mae, mae-weighted, soft-dtw, adaptive-robust
+  max_number_of_epochs: 1000
   early_stopping: False
   gradient_clipping:
     use_grad_clip: True

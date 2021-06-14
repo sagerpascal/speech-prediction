@@ -40,7 +40,7 @@ class Epoch:
         for m in self.metrics:
             m.to(self.device)
 
-    def batch_update(self, x, y):
+    def batch_update(self, x, y, length):
         raise NotImplementedError
 
     def on_epoch_start(self):
@@ -55,11 +55,19 @@ class Epoch:
 
         with tqdm(dataloader_, desc="{} (Epoch {})".format(self.stage_name, epoch_n + 1), file=sys.stdout,
                   disable=not self.verbose) as iterator:
-            for x, y in iterator:
+            for x, y, length in iterator:
+
+                if self.conf['masking']['start_idx'] == 'full':
+                    _, indices = torch.sort(length, descending=True)
+
+                    x = torch.autograd.Variable(x[indices])
+                    y = torch.autograd.Variable(y[indices])
+                    length = torch.autograd.Variable(length[indices])
+
                 x, y = x.to(self.device), y.to(self.device)
 
                 # train the network with one batch
-                loss, y_pred = self.batch_update(x, y)
+                loss, y_pred = self.batch_update(x, y, length)
 
                 # update logs: loss value
                 loss_value = loss.cpu().detach().numpy()
@@ -101,19 +109,19 @@ class TrainEpoch(Epoch):
     def on_epoch_start(self):
         self.model.train()
 
-    def batch_update(self, x, y):
+    def batch_update(self, x, y, length):
         self.optimizer.zero_grad()
-        output = self.model.forward(x, y)
+        output = self.model.forward(x, y, seq_lengths=length)
         if isinstance(output, tuple):
             output = output[0]
         loss = self.loss(output, y)
         loss.backward()
         if self.use_grad_clip_norm:
             grad_norm = clip_grad_norm_(self.model.parameters(), self.grad_clip_threshold)
-            for name, param in self.model.named_parameters():
-                if param.grad.norm() >= 1.:
-                    logger.info("Gradients clipped")
-                    logger.info(name, param.grad.norm())
+            # for name, param in self.model.named_parameters():
+            #     if param.grad.norm() >= 1.:
+            #         logger.info("Gradients clipped")
+            #         logger.info(name, param.grad.norm())
         self.optimizer.step()
         return loss, output
 
@@ -133,12 +141,12 @@ class ValidEpoch(Epoch):
     def on_epoch_start(self):
         self.model.eval()
 
-    def batch_update(self, x, y):
+    def batch_update(self, x, y, length):
         with torch.no_grad():
             if self.conf['env']['use_data_parallel']:
                 output = self.model.module.predict(x)
             else:
-                output = self.model.predict(x)
+                output = self.model.predict(x, seq_lengths=length)
             if isinstance(output, tuple):
                 output = output[0]
             loss = self.loss(output, y)

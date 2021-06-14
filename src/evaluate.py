@@ -1,23 +1,22 @@
 import platform
+import random
 import sys
 
+import librosa
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import random
-from tqdm import tqdm
-import librosa
 from sklearn.metrics import mean_squared_error
+from tqdm import tqdm
 
-from dataloader import get_loaders
-from metrics import get_metrics
-from models.model import get_model
-from losses.loss import get_loss
-from utils.log import format_logs
-from utils.meter import AverageValueMeter
 from audio_datasets.collate import collate_fn_debug
 from audio_datasets.normalization import undo_zero_norm
-
+from dataloader import get_loaders
+from losses.loss import get_loss
+from metrics import get_metrics
+from models.model import get_model
+from utils.log import format_logs
+from utils.meter import AverageValueMeter
 
 # U-Net with Mel-Spectrogram
 best_results_train = {
@@ -35,10 +34,11 @@ best_results_test = {
     32: 0.5968,  # whole-wood-15
 }
 
+
 def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_loss=True):
     mse_mean = []  # mse for different k if the average of x is predicted
     mse_last = []  # mse for different k, if always the last frame of x is predicted
-    mse_model = [] # mse for the prediction of the model
+    mse_model = []  # mse for the prediction of the model
 
     if use_mse_loss:
         loss_func = torch.nn.functional.mse_loss
@@ -69,12 +69,21 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_lo
             loss_meters['model'] = AverageValueMeter()
 
         with tqdm(loader_test, desc='baseline (test set)', file=sys.stdout) as iterator:
-            for x, y, *_ in iterator:
+            for x, y, complete_data_b, waveforms, speakers, sentences, indexes, lengths in iterator:
+
+                if conf['masking']['start_idx'] == 'full':
+                    _, indices = torch.sort(lengths, descending=True)
+                    x = torch.autograd.Variable(x[indices])
+                    y = torch.autograd.Variable(y[indices])
+                    length = torch.autograd.Variable(lengths[indices])
+                else:
+                    length = None
+
                 x, y = x.to(conf['device']), y.to(conf['device'])
 
                 if compare_model:
                     with torch.no_grad():
-                        y_pred_model = model.predict(x)
+                        y_pred_model = model.predict(x, seq_lengths=length)
                 y_pred_mean = torch.mean(x, dim=1, keepdim=True).repeat(1, k_frames, 1)  # dim 1 is the time
                 y_pred_last = x[:, -1:, :].repeat(1, k_frames, 1)
 
@@ -129,7 +138,8 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_lo
         for k, v in best_results_test.items():
             mse_test_r.append(k)
             mse_test.append(v)
-        plt.plot(range_k, mse_mean, 'bs-', range_k, mse_last, 'g^-', mse_train_r, mse_train, 'ro--', mse_test_r, mse_test, 'ro-')
+        plt.plot(range_k, mse_mean, 'bs-', range_k, mse_last, 'g^-', mse_train_r, mse_train, 'ro--', mse_test_r,
+                 mse_test, 'ro-')
         plt.legend(['Mean of x', 'Last value of x', 'Prediction Train', 'Prediction Test'])
 
 
@@ -163,11 +173,20 @@ def calc_metrics(conf, loader_test, model, metrics):
     loss_func = get_loss(conf)
 
     with tqdm(loader_test, desc='evaluate (test set)', file=sys.stdout) as iterator:
-        for x, y, *_ in iterator:
+        for x, y, complete_data_b, waveforms, speakers, sentences, indexes, lengths in iterator:
+
+            if conf['masking']['start_idx'] == 'full':
+                _, indices = torch.sort(lengths, descending=True)
+                x = torch.autograd.Variable(x[indices])
+                y = torch.autograd.Variable(y[indices])
+                length = torch.autograd.Variable(lengths[indices])
+            else:
+                length = None
 
             x, y = x.to(conf['device']), y.to(conf['device'])
+
             with torch.no_grad():
-                y_pred = model.predict(x)  # model.forward(x, y)
+                y_pred = model.predict(x, seq_lengths=length)  # model.forward(x, y)
                 if isinstance(y_pred, tuple):
                     y_pred = y_pred[0]
                 loss = loss_func(y_pred, y)
@@ -195,20 +214,25 @@ def calc_metrics(conf, loader_test, model, metrics):
 
 
 def plot_one_predicted_batch(conf, loader_test, model):
-
     it_loader_test = iter(loader_test)
-    data, target, complete_data_b, waveforms = next(it_loader_test)
+    data, target, complete_data_b, waveforms, speakers, sentences, indexes, lengths = next(it_loader_test)
     is_mel_spectro = conf['data']['type'] = 'mel-spectro'
 
-    if is_mel_spectro:
-        mean, std = conf['data']['stats']['mel-spectro']['train']['mean'], conf['data']['stats']['mel-spectro']['train']['std']
+    mean = conf['data']['stats'][conf['data']['type']]['train']['mean']
+    std = conf['data']['stats'][conf['data']['type']]['train']['std']
+
+    if conf['masking']['start_idx'] == 'full':
+        _, indices = torch.sort(lengths, descending=True)
+        data = torch.autograd.Variable(data[indices])
+        target = torch.autograd.Variable(target[indices])
+        length = torch.autograd.Variable(lengths[indices])
     else:
-        mean, std = conf['data']['stats']['mfcc']['train']['mean'], conf['data']['stats']['mfcc']['train']['std']
+        length = None
 
     x_t, y_t = data.to(conf['device']), target.to(conf['device'])
 
     with torch.no_grad():
-        y_pred = model.predict(x_t)
+        y_pred = model.predict(x_t, seq_lengths=length)
         if isinstance(y_pred, tuple):
             y_pred = y_pred[0]
 
@@ -217,8 +241,8 @@ def plot_one_predicted_batch(conf, loader_test, model):
     for i in range(len(waveforms)):
         waveform = waveforms[i]
         complete_data = complete_data_b[i, :, :].squeeze().t().numpy()
-        data_x = data[i, :, :].squeeze().t().numpy()
-        label_gt = target[i, :, :].squeeze().t().numpy()
+        data_x = x_t[i, :, :].cpu().squeeze().t().numpy()
+        label_gt = y_t[i, :, :].cpu().squeeze().t().numpy()
         label_pr = y_pred[i, :, :].squeeze().t().cpu().numpy()
 
         mse = mean_squared_error(label_gt, label_pr)
@@ -263,7 +287,7 @@ def plot_one_predicted_batch(conf, loader_test, model):
         axs[1 + offset, 1].imshow(label_pr, origin='lower', vmin=vmin, vmax=vmax, aspect="auto")
         axs[1 + offset, 1].set_title("Prediction (MSE={})".format(mse))
         plt.tight_layout()
-        plt.savefig("eval/fearless-sea-46/{}.png".format(i))
+        # plt.savefig("eval/fearless-sea-46/{}.png".format(i))
         plt.show()
 
 
@@ -282,13 +306,22 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
 
     # select a random batch between 1 and 10
     for _ in range(random.randint(1, 10)):
-        x, y, original, waveform = next(it_loader_test)
+        x, y, original, waveform, speakers, sentences, indexes, lengths = next(it_loader_test)
+
+        if conf['masking']['start_idx'] == 'full':
+            _, indices = torch.sort(lengths, descending=True)
+            x = torch.autograd.Variable(x[indices])
+            y = torch.autograd.Variable(y[indices])
+            length = torch.autograd.Variable(lengths[indices])
+        else:
+            length = None
+
+        x, y = x.to(conf['device']), y.to(conf['device'])
 
     # only use one example from batch -> select a random batch
     random_idx = random.randint(0, x.shape[0] - 1)
     x = x[random_idx, :, :]
     y = y[random_idx, :, :]
-
 
     if waveform[random_idx] is not None:
         waveform = waveform[random_idx].numpy()
@@ -298,7 +331,7 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
     if with_prediction:
         with torch.no_grad():
             x_t, y_t = x.unsqueeze(0).to(conf['device']), y.unsqueeze(0).to(conf['device'])
-            y_pred = model.forward(x_t)
+            y_pred = model.predict(x_t, seq_lengths=length)
             if isinstance(y_pred, tuple):
                 y_pred = y_pred[0]
             y_pred = y_pred.squeeze()
@@ -310,7 +343,7 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
     y = y.cpu().numpy()
 
     if conf['data']['type'] == 'mel-spectro':
-        tmp = np.zeros((conf['masking']['n_frames']+conf['masking']['k_frames'], conf['data']['transform']['n_mels']))
+        tmp = np.zeros((conf['masking']['n_frames'] + conf['masking']['k_frames'], conf['data']['transform']['n_mels']))
         tmp[:conf['masking']['n_frames'], :] = x
         tmp[conf['masking']['n_frames']:, :] = y
 
@@ -374,36 +407,48 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
 
         print("Playing Signal of original sound...")
         time.sleep(0.5)
-        sd.play(to_audio(original.T, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
+        sd.play(to_audio(original.T, hop_length=conf['data']['transform']['hop_length'],
+                         sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
                 conf['data']['transform']['sample_rate'], blocking=True)
 
         print("Input (masked) signal...")
         time.sleep(0.5)
-        sd.play(to_audio(x.T, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
+        sd.play(to_audio(x.T, hop_length=conf['data']['transform']['hop_length'],
+                         sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
                 conf['data']['transform']['sample_rate'], blocking=True)
 
         if with_prediction:
             print("Playing reconstructed signal...")
             time.sleep(0.5)
-            sd.play(to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
+            sd.play(to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length'],
+                             sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
                     conf['data']['transform']['sample_rate'], blocking=True)
 
         print("Playing MFCC of original sound...")
         time.sleep(0.5)
-        sd.play(to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
+        sd.play(to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length'],
+                         sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']),
                 conf['data']['transform']['sample_rate'], blocking=True)
 
     if waveform is not None:
         scipy.io.wavfile.write('eval_out/waveform.wav', conf['data']['transform']['sample_rate'], waveform.T)
     scipy.io.wavfile.write('eval_out/original.wav', conf['data']['transform']['sample_rate'],
-                           to_audio(original.T, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']))
+                           to_audio(original.T, hop_length=conf['data']['transform']['hop_length'],
+                                    sr=conf['data']['transform']['sample_rate'],
+                                    n_fft=conf['data']['transform']['n_fft']))
     scipy.io.wavfile.write('eval_out/MFCC_masked.wav', conf['data']['transform']['sample_rate'],
-                           to_audio(x.T, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']))
+                           to_audio(x.T, hop_length=conf['data']['transform']['hop_length'],
+                                    sr=conf['data']['transform']['sample_rate'],
+                                    n_fft=conf['data']['transform']['n_fft']))
     if with_prediction:
         scipy.io.wavfile.write('eval_out/reconstructed.wav', conf['data']['transform']['sample_rate'],
-                               to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']))
+                               to_audio(reconstructed, hop_length=conf['data']['transform']['hop_length'],
+                                        sr=conf['data']['transform']['sample_rate'],
+                                        n_fft=conf['data']['transform']['n_fft']))
     scipy.io.wavfile.write('eval_out/reconstructed_orig.wav', conf['data']['transform']['sample_rate'],
-                           to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length'], sr=conf['data']['transform']['sample_rate'], n_fft=conf['data']['transform']['n_fft']))
+                           to_audio(reconstructed_orig, hop_length=conf['data']['transform']['hop_length'],
+                                    sr=conf['data']['transform']['sample_rate'],
+                                    n_fft=conf['data']['transform']['n_fft']))
 
 
 def evaluate(conf):
@@ -414,12 +459,12 @@ def evaluate(conf):
     conf['env']['use_data_parallel'] = False
     _, _, loader_test = get_loaders(conf, device=conf['device'], with_waveform=False)
     loader_test.collate_fn = collate_fn_debug
-    # model = get_model(conf, conf['device'])
-    # metrics = get_metrics(conf, conf['device'])
+    model = get_model(conf, conf['device'])
+    metrics = get_metrics(conf, conf['device'])
 
-    calc_baseline(conf, compare_model=False, plot_best_results=False)
+    # calc_baseline(conf, compare_model=False, plot_best_results=False)
 
-    # plot_one_predicted_batch(conf, loader_test, model)
+    plot_one_predicted_batch(conf, loader_test, model)
     # play_audio_files(conf, loader_test, model)
     # calc_metrics(conf, loader_test, model, metrics)
 

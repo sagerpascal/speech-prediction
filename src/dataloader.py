@@ -1,20 +1,22 @@
-import platform
 import logging
+import platform
 
+import torch
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
 from audio_datasets.collate import collate_fn
+from audio_datasets.data_augmentation import get_augmentation
 from audio_datasets.dataset import AudioDataset
 from audio_datasets.dataset_h5 import AudioDatasetH5
 from audio_datasets.torch_speech_commands import SubsetSC
-from audio_datasets.data_augmentation import get_augmentation
 
 logger = logging.getLogger(__name__)
 
+
 def _get_loader(conf, train_set, val_set, test_set, rank=None):
     if "cuda" in conf['device']:
-        num_workers = 0 if platform.system() == "Windows" else 4
+        num_workers = 0 if platform.system() == "Windows" else 8
         pin_memory = True
     else:
         num_workers = 0
@@ -90,8 +92,8 @@ def _get_torch_speech_commands(conf, device):
 
 def _get_dataset(conf, device, with_waveform):
     if conf['data'].get('paths').get(conf['data']['type']) is not None \
-       and conf['data'].get('paths').get(conf['data']['type']).get('h5') is not None \
-       and not conf['data']['augmentation']['use_augmentation']:
+            and conf['data'].get('paths').get(conf['data']['type']).get('h5') is not None \
+            and not conf['data']['augmentation']['use_augmentation']:
         train_set = AudioDatasetH5(conf, mode='train', with_waveform=with_waveform)
         val_set = AudioDatasetH5(conf, mode='val', with_waveform=with_waveform)
         test_set = AudioDatasetH5(conf, mode='test', with_waveform=with_waveform)
@@ -108,13 +110,23 @@ def _get_dataset(conf, device, with_waveform):
     if len(test_set) == 0:
         test_set = None
 
+    if conf['data']['use_subset']:
+        indices_train = torch.randperm(len(train_set)).tolist()
+        indices_valid = torch.randperm(len(val_set)).tolist()
+        indices_test = torch.randperm(len(test_set)).tolist()
+
+        train_set = torch.utils.data.Subset(train_set, indices_train[:50])
+        val_set = torch.utils.data.Subset(val_set, indices_valid[:10])
+        test_set = torch.utils.data.Subset(test_set, indices_test[:10])
+
     return _get_loader(conf, train_set, val_set, test_set, rank=device)
 
 
 def get_loaders(conf, device, with_waveform=False):
     if conf['data']['dataset'] == 'torch-speech-commands':
         return _get_torch_speech_commands(conf, device)
-    elif conf['data']['dataset'] == 'timit' or conf['data']['dataset'] == 'vox2' or conf['data']['dataset'] == 'libri-speech':
+    elif conf['data']['dataset'] == 'timit' or conf['data']['dataset'] == 'vox2' or conf['data'][
+        'dataset'] == 'libri-speech':
         return _get_dataset(conf, device, with_waveform=with_waveform)
     else:
         raise AttributeError("Unknown dataset: {}".format(conf['data']['dataset']))

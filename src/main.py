@@ -12,9 +12,9 @@ from train import train
 from utils.conf_reader import get_config
 from utils.log import setup_logging
 
-
-# TODO: Read https://github.com/stdm/stdm.github.io/blob/master/downloads/papers/CISP_2009.pdf
-# https://github.com/stdm/stdm.github.io/blob/master/downloads/papers/PhdThesis_2010.pdf
+# Deactivate debug logging of numba
+numba_logger = logging.getLogger('numba')
+numba_logger.setLevel(logging.WARNING)
 
 def init():
     setup_logging()

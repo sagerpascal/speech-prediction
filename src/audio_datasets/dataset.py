@@ -1,12 +1,15 @@
-import pandas as pd
-from pathlib import Path
-import torchaudio
 import logging
-from torch.utils.data import Dataset
-from audio_datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform, get_frames_preprocess_fn
-from audio_datasets.normalization import zero_norm
-import torch
+from pathlib import Path
+
 import h5pickle
+import platform
+import pandas as pd
+import torch
+import torchaudio
+from torch.utils.data import Dataset
+
+from audio_datasets.normalization import zero_norm
+from audio_datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform, get_frames_preprocess_fn
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +27,11 @@ class DbMelSpectroTransform:
 
 class AudioDataset(Dataset):
 
-    def __init__(self, conf, mode, df_base_path='audio_datasets/dfs', augmentation=None):
+    def __init__(self, conf, mode, df_base_path='audio_datasets/dfs', h5_base_path='/workspace/data_pa/', augmentation=None):
+
+        if platform.system() == "Windows":
+            h5_base_path = 'D:/Projekte/temporal-speech-context/data/'
+
         self.conf = conf
         self.augmentation = augmentation
         df_base_path = Path(df_base_path)
@@ -45,7 +52,7 @@ class AudioDataset(Dataset):
 
             try:
                 # use h5 file instead of multiple audio files if available for better performance
-                h5_raw_fp = Path('/workspace/data_pa/') / conf['data']['paths'].get('raw').get('h5').get(mode)
+                h5_raw_fp = Path(h5_base_path) / conf['data']['paths'].get('raw').get('h5').get(mode)
                 self.h5_raw_file = h5pickle.File(str(h5_raw_fp.resolve()), 'r', skip_cache=False)
                 h5_raw_md_fp = Path('audio_datasets/dfs') / conf['data']['paths']['raw']['h5']['metadata'][mode]
                 self.h5_raw_metadata_df = pd.read_csv(h5_raw_md_fp)
@@ -91,10 +98,19 @@ class AudioDataset(Dataset):
             self.n_frames = conf['masking']['n_frames']
             self.window_shift = conf['masking']['window_shift']
             self.sliding_window = conf['masking']['start_idx'] == 'sliding-window'
+            self.full_length = conf['masking']['start_idx'] == 'full'
 
-            # ignore all files < k_frames + n_frames
-            self.df = self.df[self.df[self.length_key] >= (self.n_frames + self.k_frames)]
-            logger.info("{} set has {} valid entries".format(mode, len(self.df)))
+            if self.full_length:
+                # ignore all files < k_frames
+                self.df = self.df[self.df[self.length_key] >= self.k_frames]
+                logger.info("{} set has {} valid entries".format(mode, len(self.df)))
+            else:
+                # ignore all files < k_frames + n_frames
+                self.df = self.df[self.df[self.length_key] >= (self.n_frames + self.k_frames)]
+                logger.info("{} set has {} valid entries".format(mode, len(self.df)))
+
+            # reset keys
+            self.df.reset_index(drop=True, inplace=True)
 
             # calculate new index mapping if with sliding window
             if self.sliding_window:
@@ -131,8 +147,8 @@ class AudioDataset(Dataset):
             waveform = torch.as_tensor(waveform, dtype=torch.float32)
             complete_data = waveform.unsqueeze(0)
         else:
-            waveform = torchaudio.load(self.df['file_path'][index_dataframe])
-            complete_data = waveform[0]
+            waveform = torchaudio.load(self.df['file_path'][index_dataframe])[0]
+            complete_data = waveform
 
         speaker = self.df['speaker'][index_dataframe]
         sentence = self.df['sentence'][index_dataframe]
@@ -152,21 +168,24 @@ class AudioDataset(Dataset):
         if self.use_norm:
             complete_data = zero_norm(complete_data, self.mean, self.std)  # normalize
 
-        if self.shape_len == 2:
-            data, target = self.preprocess(complete_data.unsqueeze(0))
-            data = data.squeeze(0)
-            target = target.squeeze(0)
+        if self.full_length:
+            data, target = complete_data[:, :, :-self.k_frames], complete_data[:, :, self.k_frames:]
         else:
-            data, target = self.preprocess(complete_data)
+            if self.shape_len == 2:
+                data, target = self.preprocess(complete_data.unsqueeze(0))
+                data = data.squeeze(0)
+                target = target.squeeze(0)
+            else:
+                data, target = self.preprocess(complete_data)
 
         if self.use_metadata:
             data_ = torch.ones(data.shape[0], data.shape[1] + 2, data.shape[2], dtype=torch.float32)
             data_[:, :-2, :] = data
             data_[:, -2, :] *= self.speaker_to_id[speaker]
             data_[:, -1, :] *= self.sentence_to_id[sentence]
-            return data_, target, complete_data, waveform, speaker, sentence
+            return data_, target, complete_data, waveform, speaker, sentence, None, data_.shape[2]
         else:
-            return data, target, complete_data, waveform, speaker, sentence
+            return data, target, complete_data, waveform, speaker, sentence, None, data.shape[2]
 
     def __len__(self):
         return self.dataset_length

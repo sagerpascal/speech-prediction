@@ -53,8 +53,8 @@ class Postnet(nn.Module):
 
     def __init__(self, conf, input_size, output_size):
         super(Postnet, self).__init__()
-        # TODO: test final bias
         final_bias = conf['data']['stats'][conf['data']['type']]['train']['mean']
+        self.apply_resize = conf['masking']['start_idx'] != 'full'
         self.layer_seq_len = nn.Linear(in_features=conf['masking']['n_frames'], out_features=conf['masking']['k_frames'])
         self.activation = nn.ReLU()
         self.layer_dim = nn.Conv1d(in_channels=input_size, out_channels=output_size, kernel_size=1, stride=1, bias=final_bias)
@@ -62,7 +62,8 @@ class Postnet(nn.Module):
     def forward(self, inputs):
         # inputs: (batch_size, seq_len, hidden_size)
         inputs = torch.transpose(inputs, 1, 2)
-        inputs = self.activation(self.layer_seq_len(inputs))
+        if self.apply_resize:
+            inputs = self.activation(self.layer_seq_len(inputs))
         # inputs: (batch_size, hidden_size, seq_len) -- for conv1d operation
 
         outputs = torch.transpose(self.layer_dim(inputs), 1, 2)
@@ -128,7 +129,7 @@ class APCModel(nn.Module):
             input_size=self.rnn_conf['hidden_size'],
             output_size=feature_dim_out)
 
-    def forward(self, inputs, target=None):
+    def forward(self, inputs, target=None, seq_lengths=None):
         """Forward function for both training and testing (feature extraction).
         input:
           inputs: (batch_size, seq_len, mel_dim)
@@ -140,7 +141,8 @@ class APCModel(nn.Module):
         seq_len = inputs.size(1)
 
         # currently, only fix lengths are used
-        seq_lengths = torch.IntTensor(inputs.shape[0] * [self.conf['masking']['n_frames']])
+        if seq_lengths is None or seq_lengths[0] is None:
+            seq_lengths = torch.IntTensor(inputs.shape[0] * [self.conf['masking']['n_frames']])
 
         if self.prenet is not None:
             rnn_inputs = self.prenet(inputs)
@@ -151,13 +153,11 @@ class APCModel(nn.Module):
             rnn_inputs = inputs
             internal_reps = []
 
-        # TODO: necessary???
         packed_rnn_inputs = pack_padded_sequence(rnn_inputs, seq_lengths, True)
 
         for i, layer in enumerate(self.rnns):
             packed_rnn_outputs, _ = layer(packed_rnn_inputs)
 
-            # TODO: necessary???
             rnn_outputs, _ = pad_packed_sequence(
                 packed_rnn_outputs, True, total_length=seq_len)
             # outputs: (batch_size, seq_len, rnn_hidden_size)
@@ -166,7 +166,6 @@ class APCModel(nn.Module):
                 # apply dropout except the last rnn layer
                 rnn_outputs = self.rnn_dropout(rnn_outputs)
 
-            # TODO: necessary???
             rnn_inputs, _ = pad_packed_sequence(
                 packed_rnn_inputs, True, total_length=seq_len)
             # rnn_inputs: (batch_size, seq_len, rnn_hidden_size)
@@ -177,7 +176,6 @@ class APCModel(nn.Module):
 
             internal_reps.append(rnn_outputs)
 
-            # TODO: necessary???
             packed_rnn_inputs = pack_padded_sequence(rnn_outputs, seq_lengths, True)
 
         predicted_mel = self.postnet(rnn_outputs)
@@ -188,11 +186,11 @@ class APCModel(nn.Module):
         # predicted_mel is only for training; internal_reps is the extracted
         # features
 
-    def predict(self, x, y=None):
+    def predict(self, x, y=None, seq_lengths=None):
         if self.training:
             self.eval()
 
         with torch.no_grad():
-            x = self.forward(x)
+            x = self.forward(x, seq_lengths=seq_lengths)
 
         return x

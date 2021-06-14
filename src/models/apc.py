@@ -51,13 +51,14 @@ class Postnet(nn.Module):
     extraction.
     """
 
-    def __init__(self, conf, input_size, output_size):
+    def __init__(self, conf, input_size, output_size, out_features_postnet):
         super(Postnet, self).__init__()
         final_bias = conf['data']['stats'][conf['data']['type']]['train']['mean']
         self.apply_resize = conf['masking']['start_idx'] != 'full'
-        self.layer_seq_len = nn.Linear(in_features=conf['masking']['n_frames'], out_features=conf['masking']['k_frames'])
+        self.layer_seq_len = nn.Linear(in_features=conf['masking']['n_frames'], out_features=out_features_postnet)
         self.activation = nn.ReLU()
-        self.layer_dim = nn.Conv1d(in_channels=input_size, out_channels=output_size, kernel_size=1, stride=1, bias=final_bias)
+        self.layer_dim = nn.Conv1d(in_channels=input_size, out_channels=output_size, kernel_size=1, stride=1,
+                                   bias=final_bias)
 
     def forward(self, inputs):
         # inputs: (batch_size, seq_len, hidden_size)
@@ -98,9 +99,11 @@ class APCModel(nn.Module):
         self.rnn_conf = conf['model']['apc']['rnn']
         feature_dim = conf['data']['transform']['n_mfcc'] if conf['data']['type'] == 'mfcc' else \
             conf['data']['transform']['n_mels']
+        self.out_features_postnet = conf['masking']['k_frames'] / conf['model']['apc']['refeed_fac']
+        self.k_frames = conf['masking']['k_frames']
 
         feature_dim_in = feature_dim + 2 if conf['masking']['add_metadata'] else feature_dim
-        feature_dim_out = feature_dim
+        self.feature_dim_out = feature_dim
 
         if self.prenet_conf['use_prenet']:
             rnn_input_size = self.prenet_conf['hidden_size']
@@ -127,64 +130,73 @@ class APCModel(nn.Module):
         self.postnet = Postnet(
             conf,
             input_size=self.rnn_conf['hidden_size'],
-            output_size=feature_dim_out)
+            output_size=self.feature_dim_out,
+            out_features_postnet=self.out_features_postnet)
 
-    def forward(self, inputs, target=None, seq_lengths=None):
+    def forward(self, x, target=None, seq_lengths=None):
         """Forward function for both training and testing (feature extraction).
         input:
-          inputs: (batch_size, seq_len, mel_dim)
+          x: (batch_size, seq_len, mel_dim)
         return:
           predicted_mel: (batch_size, seq_len, mel_dim)
           internal_reps: (num_layers + x, batch_size, seq_len, rnn_hidden_size),
             where x is 1 if there's a prenet, otherwise 0
         """
+        inputs = x.clone()
+        predicted_mel = None
+
         seq_len = inputs.size(1)
 
         # currently, only fix lengths are used
         if seq_lengths is None or seq_lengths[0] is None:
             seq_lengths = torch.IntTensor(inputs.shape[0] * [self.conf['masking']['n_frames']])
 
-        if self.prenet is not None:
-            rnn_inputs = self.prenet(inputs)
-            # rnn_inputs: (batch_size, seq_len, rnn_input_size)
-            internal_reps = [rnn_inputs]
-            # also include prenet_outputs in internal_reps
-        else:
-            rnn_inputs = inputs
-            internal_reps = []
+        for cycle in range(self.conf['model']['apc']['refeed_fac']):
 
-        packed_rnn_inputs = pack_padded_sequence(rnn_inputs, seq_lengths, True)
+            if self.prenet is not None:
+                rnn_inputs = self.prenet(inputs)
+                # rnn_inputs: (batch_size, seq_len, rnn_input_size)
+                internal_reps = [rnn_inputs]
+                # also include prenet_outputs in internal_reps
+            else:
+                rnn_inputs = inputs
+                internal_reps = []
 
-        for i, layer in enumerate(self.rnns):
-            packed_rnn_outputs, _ = layer(packed_rnn_inputs)
+            packed_rnn_inputs = pack_padded_sequence(rnn_inputs, seq_lengths, True)
 
-            rnn_outputs, _ = pad_packed_sequence(
-                packed_rnn_outputs, True, total_length=seq_len)
-            # outputs: (batch_size, seq_len, rnn_hidden_size)
+            for i, layer in enumerate(self.rnns):
+                packed_rnn_outputs, _ = layer(packed_rnn_inputs)
 
-            if i + 1 < len(self.rnns):
-                # apply dropout except the last rnn layer
-                rnn_outputs = self.rnn_dropout(rnn_outputs)
+                rnn_outputs, _ = pad_packed_sequence(packed_rnn_outputs, True, total_length=seq_len)
+                # outputs: (batch_size, seq_len, rnn_hidden_size)
 
-            rnn_inputs, _ = pad_packed_sequence(
-                packed_rnn_inputs, True, total_length=seq_len)
-            # rnn_inputs: (batch_size, seq_len, rnn_hidden_size)
+                if i + 1 < len(self.rnns):
+                    # apply dropout except the last rnn layer
+                    rnn_outputs = self.rnn_dropout(rnn_outputs)
 
-            if self.rnn_residual and rnn_inputs.size(-1) == rnn_outputs.size(-1):
-                # Residual connections
-                rnn_outputs = rnn_outputs + rnn_inputs
+                rnn_inputs, _ = pad_packed_sequence(packed_rnn_inputs, True, total_length=seq_len)
+                # rnn_inputs: (batch_size, seq_len, rnn_hidden_size)
 
-            internal_reps.append(rnn_outputs)
+                if self.rnn_residual and rnn_inputs.size(-1) == rnn_outputs.size(-1):
+                    # Residual connections
+                    rnn_outputs = rnn_outputs + rnn_inputs
 
-            packed_rnn_inputs = pack_padded_sequence(rnn_outputs, seq_lengths, True)
+                internal_reps.append(rnn_outputs)
 
-        predicted_mel = self.postnet(rnn_outputs)
-        # predicted_mel: (batch_size, seq_len, mel_dim)
+                packed_rnn_inputs = pack_padded_sequence(rnn_outputs, seq_lengths, True)
 
-        internal_reps = None# TODO internal_reps = torch.stack(internal_reps)
-        return predicted_mel, internal_reps
-        # predicted_mel is only for training; internal_reps is the extracted
-        # features
+            pr = self.postnet(rnn_outputs)
+            if predicted_mel is None:
+                predicted_mel = torch.zeros((pr.shape[0], self.k_frames, self.feature_dim_out), dtype=torch.float32).to('cuda')
+
+            predicted_mel[:, self.out_features_postnet * cycle:self.out_features_postnet * (cycle + 1), :] = pr.clone()
+            # predicted_mel: (batch_size, seq_len, mel_dim)
+
+            inputs = inputs.clone()
+            inputs[:, :-self.out_features_postnet, :] = inputs[:, self.out_features_postnet:, :].clone()
+            inputs[:, -self.out_features_postnet:, :] = predicted_mel[:, self.out_features_postnet * cycle:self.out_features_postnet * (cycle + 1), :].clone()
+
+        return predicted_mel
 
     def predict(self, x, y=None, seq_lengths=None):
         if self.training:

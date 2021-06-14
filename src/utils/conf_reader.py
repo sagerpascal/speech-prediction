@@ -54,4 +54,7 @@ def get_config():
     conf['model']['apc']['prenet']['num_layers'] = int(args.apc_num_prenet_layer)
     conf['model']['apc']['rnn']['num_layers'] = int(args.apc_num_rnn_layer)
 
+    if conf['model']['type'] == 'apc':
+        assert conf['masking']['k_frames'] % conf['model']['apc']['refeed_fac'] == 0
+
     return conf

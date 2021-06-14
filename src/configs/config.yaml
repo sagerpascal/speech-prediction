@@ -50,6 +50,7 @@ model:
       - 512
       - 512
   apc:
+    refeed_fac: 1  # how many times to use the output as input (i.e. predict refeed_fac times k/refeed_fac frames)
     prenet:
       use_prenet: True
 #      num_layers: 7

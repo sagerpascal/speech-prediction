@@ -38,12 +38,13 @@ class WeightedL1Loss(torch.nn.L1Loss):
         self.batch_size = self.conf['train']['batch_size']
         self.n_dim = conf['data']['transform']['n_mfcc'] if conf['data']['type'] == 'mfcc' else \
             conf['data']['transform']['n_mels']
-        self.seq_len = self.conf['masking']['n_frames']
+        self.seq_len = self.conf['masking']['k_frames']
+        self.device = conf['device']
         self.weight = self.calc_weights(
             batch_size=self.batch_size,
             seq_length=self.seq_len,
             n_dim=self.n_dim,
-        )
+        ).to(self.device)
 
     def calc_weights(self, batch_size, seq_length, n_dim):
         weight_per_time = np.linspace(2, 0.5, seq_length)
@@ -52,13 +53,12 @@ class WeightedL1Loss(torch.nn.L1Loss):
         return torch.as_tensor(weights, dtype=torch.float)
 
     def forward(self, input, target):
-        raise NotImplementedError("Test me")
         loss = super().forward(input, target)
         if input.shape[0] == self.batch_size:
             loss *= self.weight
         else:
             # only for the last batch if it contains less elements than batch_size
-            weights = self.calc_weights(input.shape[0], self.seq_length, self.n_dim)
+            weights = self.calc_weights(input.shape[0], self.seq_len, self.n_dim).to(self.device)
             loss *= weights
         return torch.mean(loss)
 

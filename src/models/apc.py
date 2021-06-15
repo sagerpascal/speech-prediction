@@ -99,7 +99,7 @@ class APCModel(nn.Module):
         self.rnn_conf = conf['model']['apc']['rnn']
         feature_dim = conf['data']['transform']['n_mfcc'] if conf['data']['type'] == 'mfcc' else \
             conf['data']['transform']['n_mels']
-        self.out_features_postnet = conf['masking']['k_frames'] / conf['model']['apc']['refeed_fac']
+        self.out_features_postnet = int(conf['masking']['k_frames'] / conf['model']['apc']['refeed_fac'])
         self.k_frames = conf['masking']['k_frames']
 
         feature_dim_in = feature_dim + 2 if conf['masking']['add_metadata'] else feature_dim
@@ -186,10 +186,15 @@ class APCModel(nn.Module):
                 packed_rnn_inputs = pack_padded_sequence(rnn_outputs, seq_lengths, True)
 
             pr = self.postnet(rnn_outputs)
-            if predicted_mel is None:
-                predicted_mel = torch.zeros((pr.shape[0], self.k_frames, self.feature_dim_out), dtype=torch.float32).to('cuda')
 
-            predicted_mel[:, self.out_features_postnet * cycle:self.out_features_postnet * (cycle + 1), :] = pr.clone()
+            if self.conf['masking']['start_idx'] == 'full':
+                # if predicted_mel is None:
+                #     predicted_mel = torch.zeros((pr.shape[0], pr.shape[1], self.feature_dim_out), dtype=torch.float32).to('cuda')
+                predicted_mel = pr
+            else:
+                if predicted_mel is None:
+                    predicted_mel = torch.zeros((pr.shape[0], self.k_frames, self.feature_dim_out), dtype=torch.float32).to('cuda')
+                predicted_mel[:, self.out_features_postnet * cycle:self.out_features_postnet * (cycle + 1), :] = pr.clone()
             # predicted_mel: (batch_size, seq_len, mel_dim)
 
             inputs = inputs.clone()

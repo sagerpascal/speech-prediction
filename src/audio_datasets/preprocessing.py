@@ -49,14 +49,11 @@ class Preprocess(nn.Module):
 
     def forward(self, frames):
         if frames.shape[2] < self.k_frames:
-            # frames contains less frames than we want to predict -> set data and target to 0
-            # data = torch.zeros((mfcc.shape[0], mfcc.shape[1], self.n_frames), dtype=torch.float)
-            # target = torch.zeros((mfcc.shape[0], mfcc.shape[1], self.k_frames), dtype=torch.float)
             logger.error("Number of total frames is smaller than number of frames we want to predict...")
             raise RuntimeError("Number of frames too small")
 
         elif frames.shape[2] < self.n_frames + self.k_frames:
-            logger.error("MFCC (length={}) is smaller than n_frames ({}) + k_frames ({}) ...".format(frames.shape[2],
+            logger.error("Number of frames ({}) is smaller than n_frames ({}) + k_frames ({}) ...".format(frames.shape[2],
                                                                                                      self.n_frames,
                                                                                                      self.k_frames))
             return self.forward_action_too_small(frames)

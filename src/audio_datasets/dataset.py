@@ -109,8 +109,6 @@ class AudioDataset(Dataset):
                 self.df = self.df[self.df[self.length_key] >= (self.n_frames + self.k_frames)]
                 logger.info("{} set has {} valid entries".format(mode, len(self.df)))
 
-            # reset keys
-            self.df.reset_index(drop=True, inplace=True)
 
             # calculate new index mapping if with sliding window
             if self.sliding_window:
@@ -124,6 +122,9 @@ class AudioDataset(Dataset):
                         start += self.window_shift
                         length -= self.window_shift
                         item_count += 1
+            else:
+                # reset keys
+                self.df.reset_index(drop=True, inplace=True)
 
             # calculate the dataset length
             if self.sliding_window:

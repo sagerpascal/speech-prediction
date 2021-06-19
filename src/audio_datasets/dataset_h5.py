@@ -92,9 +92,6 @@ class AudioDatasetH5(Dataset):
                 valid_idx = self.metadata_df[self.length_key] >= (self.n_frames + self.k_frames)
             self.metadata_df = self.metadata_df[valid_idx]
 
-            # reset keys
-            self.metadata_df.reset_index(drop=True, inplace=True)
-
             if self.with_waveform:
                 self.dataset_df = pd.read_csv(ds_fp)
                 self.dataset_df = self.dataset_df[valid_idx]
@@ -114,6 +111,9 @@ class AudioDatasetH5(Dataset):
                         start += self.window_shift
                         length -= self.window_shift
                         item_count += 1
+            else:
+                # reset keys
+                self.metadata_df.reset_index(drop=True, inplace=True)
 
             # calculate the dataset length
             if self.sliding_window:

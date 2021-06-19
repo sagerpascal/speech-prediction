@@ -198,8 +198,12 @@ class APCModel(nn.Module):
             # predicted_mel: (batch_size, seq_len, mel_dim)
 
             inputs = inputs.clone()
-            inputs[:, :-self.out_features_postnet, :] = inputs[:, self.out_features_postnet:, :].clone()
-            inputs[:, -self.out_features_postnet:, :] = predicted_mel[:, self.out_features_postnet * cycle:self.out_features_postnet * (cycle + 1), :].clone()
+            if self.conf['masking']['add_metadata']:
+                inputs[:, :-self.out_features_postnet, :] = inputs[:, self.out_features_postnet:, :].clone()
+                inputs[:, -self.out_features_postnet:, :-2] = predicted_mel[:, self.out_features_postnet * cycle:self.out_features_postnet * (cycle + 1), :].clone()
+            else:
+                inputs[:, :-self.out_features_postnet, :] = inputs[:, self.out_features_postnet:, :].clone()
+                inputs[:, -self.out_features_postnet:, :] = predicted_mel[:, self.out_features_postnet * cycle:self.out_features_postnet * (cycle + 1), :].clone()
 
         return predicted_mel
 

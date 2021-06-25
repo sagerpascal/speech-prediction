@@ -139,7 +139,6 @@ class APCModel(nn.Module):
           x: (batch_size, seq_len, mel_dim)
         return:
           predicted_mel: (batch_size, seq_len, mel_dim)
-          internal_reps: (num_layers + x, batch_size, seq_len, rnn_hidden_size),
             where x is 1 if there's a prenet, otherwise 0
         """
         inputs = x.clone()
@@ -156,11 +155,8 @@ class APCModel(nn.Module):
             if self.prenet is not None:
                 rnn_inputs = self.prenet(inputs)
                 # rnn_inputs: (batch_size, seq_len, rnn_input_size)
-                internal_reps = [rnn_inputs]
-                # also include prenet_outputs in internal_reps
             else:
                 rnn_inputs = inputs
-                internal_reps = []
 
             packed_rnn_inputs = pack_padded_sequence(rnn_inputs, seq_lengths, True)
 
@@ -181,7 +177,6 @@ class APCModel(nn.Module):
                     # Residual connections
                     rnn_outputs = rnn_outputs + rnn_inputs
 
-                internal_reps.append(rnn_outputs)
 
                 packed_rnn_inputs = pack_padded_sequence(rnn_outputs, seq_lengths, True)
 

@@ -2,10 +2,11 @@ import logging
 
 import torch
 
-from models.apc import APCModel
+from models.gru import GRUModel
 from models.simple_cnn import SimpleCNN
 from models.transformer import CustomTransformer
 from models.unet import CustomUnet
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,8 @@ def get_model(conf, device):
         model = CustomUnet(conf)
     elif conf['model']['type'] == 'cnn':
         model = SimpleCNN(conf)
-    elif conf['model']['type'] == 'apc':
-        model = APCModel(conf)
+    elif conf['model']['type'] == 'gru':
+        model = GRUModel(conf)
     else:
         raise AttributeError("Unknown Model in config file: {}".format(conf['model']['type']))
 

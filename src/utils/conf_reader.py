@@ -32,8 +32,9 @@ def get_config():
     parser.add_argument("--batch_size", default=32, help="The mini-batch size")
     parser.add_argument("--step_size", default=20, help="LR scheduler step size")
     parser.add_argument("--gamma", default=0.8, help="LR scheduler gamma")
-    parser.add_argument("--apc_num_prenet_layer", default=5, help="Number of prenet layers")
-    parser.add_argument("--apc_num_rnn_layer", default=4, help="Number of RNN layers")
+    parser.add_argument("--gru_num_prenet_layer", default=5, help="Number of prenet layers")
+    parser.add_argument("--gru_num_rnn_layer", default=4, help="Number of RNN layers")
+    parser.add_argument("--gru_num_postnet_layer", default=3, help="Number of postnet layers")
     args = parser.parse_args()
 
     args_dict = {
@@ -51,14 +52,14 @@ def get_config():
     conf['env']['use_data_parallel'] = 'cuda' in device and conf_file['env']['world_size'] > 1
     conf['masking']['window_shift'] = conf['masking']['n_frames'] + conf['masking']['k_frames'] if \
         conf['masking']['window_shift'] == 'None' else conf['masking']['window_shift']
-    conf['model']['apc']['prenet']['num_layers'] = int(args.apc_num_prenet_layer)
-    conf['model']['apc']['rnn']['num_layers'] = int(args.apc_num_rnn_layer)
+    conf['model']['gru']['prenet']['num_layers'] = int(args.gru_num_prenet_layer)
+    conf['model']['gru']['rnn']['num_layers'] = int(args.gru_num_rnn_layer)
 
-    if conf['model']['type'] == 'apc':
-        assert conf['model']['apc']['refeed_fac'] >= 1
-        assert conf['masking']['k_frames'] % conf['model']['apc']['refeed_fac'] == 0
+    if conf['model']['type'] == 'gru':
+        assert conf['model']['gru']['refeed_fac'] >= 1
+        assert conf['masking']['k_frames'] % conf['model']['gru']['refeed_fac'] == 0
 
     if conf['masking']['start_idx'] == 'full':
-        assert conf['model']['apc']['refeed_fac'] == 1
+        assert conf['model']['gru']['refeed_fac'] == 1
 
     return conf

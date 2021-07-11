@@ -40,7 +40,7 @@ class Epoch:
         for m in self.metrics:
             m.to(self.device)
 
-    def batch_update(self, x, y, length):
+    def batch_update(self, x, y, length, epoch):
         raise NotImplementedError
 
     def on_epoch_start(self):
@@ -67,7 +67,7 @@ class Epoch:
                 x, y = x.to(self.device), y.to(self.device)
 
                 # train the network with one batch
-                loss, y_pred = self.batch_update(x, y, length)
+                loss, y_pred = self.batch_update(x, y, length, epoch_n)
 
                 # update logs: loss value
                 loss_value = loss.cpu().detach().numpy()
@@ -109,9 +109,9 @@ class TrainEpoch(Epoch):
     def on_epoch_start(self):
         self.model.train()
 
-    def batch_update(self, x, y, length):
+    def batch_update(self, x, y, length, epoch):
         self.optimizer.zero_grad()
-        output = self.model.forward(x, y, seq_lengths=length)
+        output = self.model.forward(x, y, seq_lengths=length, epoch=epoch)
         if isinstance(output, tuple):
             output = output[0]
         loss = self.loss(output, y)
@@ -141,7 +141,7 @@ class ValidEpoch(Epoch):
     def on_epoch_start(self):
         self.model.eval()
 
-    def batch_update(self, x, y, length):
+    def batch_update(self, x, y, length, epoch):
         with torch.no_grad():
             if self.conf['env']['use_data_parallel']:
                 output = self.model.module.predict(x)
@@ -330,7 +330,7 @@ def train(rank=None, mport=None, store_port=None, world_size=None, conf=None):
                 model.load_state_dict(torch.load(filename, map_location=map_location))
 
         if (i + 1) % conf['train']['backup_frequency'] == 0 and is_main_process:
-            model_name = "{}_backup.pth".format(wandb.run.name) if conf['use_wandb'] else 'model_backup.pth'
+            model_name = "{}-backup-{}.pth".format(wandb.run.name, i+1) if conf['use_wandb'] else 'model-backup-{}.pth'.format(i+1)
             save_model(model, '/workspace/data_pa/trained_models', model_name, save_wandb=False)
             logger.info("Model saved as backup after {} epochs".format(i))
 

@@ -1,7 +1,7 @@
 import math
 import torch
 import torch.nn as nn
-
+import random
 
 class Time2Vec(nn.Module):
     """
@@ -65,37 +65,45 @@ class CustomTransformer(nn.Transformer):
         self.t_pos_enc = Time2Vec(self.conf['masking']['k_frames'], d_model - 1)
         self.x_pos_enc = PositionalEncoding(d_model)
         self.t_pos_enc = PositionalEncoding(d_model)
-
+        self.teacher_forcing_ratio = .5
         self.out = nn.Linear(d_model, d_model)
 
-    def forward(self, x, y):
+    def forward(self, x, y, seq_lengths=None, epoch=None):
         target = torch.ones_like(y) * self.start_mask
         target[:, 0, :] = x[:, -1, :]
         target[:, 1:, :] = y[:, :-1, :]
-        x = self.x_pos_enc(x)
-        target = self.t_pos_enc(target)
-        x2 = x.permute(1, 0, 2)
-        target2 = target.permute(1, 0, 2)
-        target_mask = super().generate_square_subsequent_mask(target2.shape[0]).to(self.device)
-        result = super().forward(x2, target2, tgt_mask=target_mask)
-        return self.out(result.permute(1, 0, 2))
 
-        # result = torch.ones((x.shape[0], self.k_frames + 1, x.shape[2])).to(self.device) * self.start_mask
-        # result[:, 0, :] = x[:, -1, :]
-        # for i in range(self.k_frames):
-        #     target = result[:, :i + 1, :]
-        #     x = self.x_pos_enc(x)
-        #     target = self.t_pos_enc(target)
-        #     x2 = x.permute(1, 0, 2)
-        #     target2 = target.permute(1, 0, 2)
-        #     pred = super().forward(x2, target2)
-        #     pred = pred.permute(1, 0, 2)
-        #     result[:, i + 1, :] = pred[:, -1, :]
-        #
-        # result = result[:, 1:, :]
-        # return self.out(result)
+        if epoch is not None:
+            self.teacher_forcing_ratio = 0.5 - (0.04*epoch)
 
-    def predict(self, x):
+        use_teacher_forcing = True if random.random() < self.teacher_forcing_ratio else False
+
+        if use_teacher_forcing:
+            x = x.permute(1, 0, 2)
+            target = target.permute(1, 0, 2)
+            x = self.x_pos_enc(x)
+            target = self.t_pos_enc(target)
+            target_mask = super().generate_square_subsequent_mask(target.shape[0]).to(self.device)
+            result = super().forward(x, target, tgt_mask=target_mask)
+            return self.out(result.permute(1, 0, 2))
+
+        else:
+            result = torch.ones((x.shape[0], self.k_frames + 1, x.shape[2])).to(self.device) * self.start_mask
+            result[:, 0, :] = x[:, -1, :]
+            for i in range(self.k_frames):
+                target = result[:, :i + 1, :]
+                x = self.x_pos_enc(x)
+                target = self.t_pos_enc(target)
+                x2 = x.permute(1, 0, 2)
+                target2 = target.permute(1, 0, 2)
+                pred = super().forward(x2, target2)
+                pred = pred.permute(1, 0, 2)
+                result[:, i + 1, :] = pred[:, -1, :]
+
+            result = result[:, 1:, :]
+            return self.out(result)
+
+    def predict(self, x, seq_lengths=None):
         result = torch.ones((x.shape[0], self.k_frames+1, x.shape[2])).to(self.device) * self.start_mask
         result[:, 0, :] = x[:, -1, :]
         for i in range(self.k_frames):

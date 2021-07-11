@@ -299,7 +299,7 @@ class SoftDTW(torch.nn.Module):
         if dist_func is not None:
             self.dist_func = dist_func
         else:
-            self.dist_func = SoftDTW._euclidean_dist_func
+            self.dist_func = SoftDTW._abs_dist_func
 
     def _get_func_dtw(self, x, y):
         """

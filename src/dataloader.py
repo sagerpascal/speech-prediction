@@ -70,7 +70,7 @@ def _get_loader(conf, train_set, val_set, test_set, rank=None):
             test_set,
             batch_size=conf['train']['batch_size'],
             shuffle=test_loader_shuffle,
-            drop_last=False,
+            drop_last=True,
             collate_fn=collate_fn,
             num_workers=num_workers,
             pin_memory=pin_memory,
@@ -115,9 +115,9 @@ def _get_dataset(conf, device, with_waveform):
         indices_valid = torch.randperm(len(val_set)).tolist()
         indices_test = torch.randperm(len(test_set)).tolist()
 
-        train_set = torch.utils.data.Subset(train_set, indices_train[:50])
-        val_set = torch.utils.data.Subset(val_set, indices_valid[:10])
-        test_set = torch.utils.data.Subset(test_set, indices_test[:10])
+        train_set = torch.utils.data.Subset(train_set, indices_train[:1024])
+        val_set = torch.utils.data.Subset(val_set, indices_valid[:512])
+        test_set = torch.utils.data.Subset(test_set, indices_test[:512])
 
     return _get_loader(conf, train_set, val_set, test_set, rank=device)
 

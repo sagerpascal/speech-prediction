@@ -17,7 +17,7 @@ transfer files, but also to use the Docker container as a remote debugger for Py
    ```
    
 4. Save the `Dockerfile`, the archive `ssh_keys.tar.gz` and the file `requirements.txt` in the same Folder and run in
- this folder the command
+ the command
    ```bash
-   docker build -t tsc .
+   docker build -t speech-prediction <path/to/folder>
    ```

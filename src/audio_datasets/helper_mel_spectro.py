@@ -81,13 +81,13 @@ def calc_mean_std(fp):
 if __name__ == '__main__':
     os.chdir('../')
     conf = get_config()
-    # create_h5_file(conf, 'timit-orig-train.csv', 'timit_mel_spectro_metadata_train_dB-80.csv',
-    #                'timit_mel-spectro_train_dB-80.h5')
-    # create_h5_file(conf, 'timit-orig-val.csv', 'timit_mel_spectro_metadata_valid_dB-80.csv',
-    #                'timit_mel-spectro_valid_dB-80.h5')
-    # create_h5_file(conf, 'timit-orig-test.csv', 'timit_mel_spectro_metadata_test_dB-80.csv',
-    #                'timit_mel-spectro_test_dB-80.h5')
-    # calc_mean_std('timit_mel-spectro_train_dB-80.h5')
+    create_h5_file(conf, 'timit-orig-train.csv', 'timit_mel_spectro_metadata_train_dB-80.csv',
+                   'timit_mel-spectro_train_dB-80.h5')
+    create_h5_file(conf, 'timit-orig-val.csv', 'timit_mel_spectro_metadata_valid_dB-80.csv',
+                   'timit_mel-spectro_valid_dB-80.h5')
+    create_h5_file(conf, 'timit-orig-test.csv', 'timit_mel_spectro_metadata_test_dB-80.csv',
+                   'timit_mel-spectro_test_dB-80.h5')
+    calc_mean_std('timit_mel-spectro_train_dB-80.h5')
 
     # create_h5_file(conf, 'libri-speech-orig-train.csv', 'libri-speech_mel_spectro_metadata_train.csv',
     #                'libri-speech_mel-spectro_train_dB-80.h5')

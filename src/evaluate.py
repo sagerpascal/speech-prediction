@@ -236,7 +236,6 @@ def plot_one_predicted_batch(conf, loader_test, model):
         if isinstance(y_pred, tuple):
             y_pred = y_pred[0]
 
-    print("MSE = {}".format(torch.nn.functional.mse_loss(y_pred.to('cpu'), target.to('cpu'))))
 
     for i in range(len(waveforms)):
         waveform = waveforms[i]
@@ -464,8 +463,6 @@ def evaluate(conf):
 
     # calc_baseline(conf, compare_model=False, plot_best_results=False)
 
+    calc_metrics(conf, loader_test, model, metrics)
     plot_one_predicted_batch(conf, loader_test, model)
     # play_audio_files(conf, loader_test, model)
-    # calc_metrics(conf, loader_test, model, metrics)
-
-    # play_audio_files(conf, loader_test, None, with_prediction=False)

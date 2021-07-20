@@ -6,7 +6,7 @@ env:
 
 # Mask MFCC
 masking:
-  position: end # end, beginning or center
+  position: end # Which frames of a sequence to predict: end (subsequent frames), beginning (previous frames) or center (frames in the center)
   n_frames: 60 # max. number of input frames
   k_frames: 25 # number of frames to predict
   window_shift: 1 # None = n_frames+k_frames
@@ -15,7 +15,7 @@ masking:
 
 # Dataset
 data:
-  type: mel-spectro # raw, mel-spectro or mfcc
+  type: mel-spectro # mel-spectro or mfcc
   config_file: datasets/timit-original.yaml
   use_subset: False
   augmentation:

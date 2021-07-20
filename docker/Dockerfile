@@ -18,7 +18,7 @@ RUN apt-get install ffmpeg libsm6 libxext6  -y
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
-# Install ssh
+# Install ssh (optional, for remote debugging)
 RUN apt-get update && apt-get install -y openssh-server openssh-client
 
 RUN mkdir /var/run/sshd

@@ -21,9 +21,6 @@ class AudioDatasetH5(Dataset):
 
     def __init__(self, conf, mode, h5_base_path='/workspace/data_pa/', with_waveform=False):
 
-        if platform.system() == "Windows":
-            h5_base_path = 'D:/Projekte/temporal-speech-context/data/'
-
         h5_base_path = Path(h5_base_path)
         meta_base_path = Path('audio_datasets/dfs')
         ds_fp = meta_base_path / conf['data']['paths']['df'][mode]

@@ -3,10 +3,10 @@ description: A neural network to predict a frame of speech (MFCC) from its prede
 lang: en
 
 # Site settings
-url: https://sagerpascal.github.io/temporal-speech-context/
+url: https://sagerpascal.github.io/speech-prediction/
 baseurl: /temporal-speech-context
 site_author: Pascal Sager
-repo_url: https://github.com/sagerpascal/temporal-speech-context
+repo_url: https://github.com/sagerpascal/speech-prediction
 
 # local theme
 #theme: jekyll-rtd-theme

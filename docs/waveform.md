@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Resynthesis Waveform
-nav_order: 6
+nav_order: 2
 ---
 
 ```python

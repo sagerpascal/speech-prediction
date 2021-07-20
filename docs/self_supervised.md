@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Self-Supervised Approaches in Audio Processing
-nav_order: 4
+nav_order: 3
 ---
 
 # Self-Supervised Approaches

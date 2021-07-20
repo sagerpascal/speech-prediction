@@ -29,9 +29,6 @@ class AudioDataset(Dataset):
 
     def __init__(self, conf, mode, df_base_path='audio_datasets/dfs', h5_base_path='/workspace/data_pa/', augmentation=None):
 
-        if platform.system() == "Windows":
-            h5_base_path = 'D:/Projekte/temporal-speech-context/data/'
-
         self.conf = conf
         self.augmentation = augmentation
         df_base_path = Path(df_base_path)

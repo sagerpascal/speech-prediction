@@ -158,7 +158,7 @@ if __name__ == '__main__':
                                                      )
     to_db = torchaudio.transforms.AmplitudeToDB()
 
-    for fp in Path('D:/Projekte/temporal-speech-context/data/tmp/').glob('**/14-212-0000.flac'):
+    for fp in Path('/workspace/data_pa/tmp/').glob('**/14-212-0000.flac'):
         waveform = torchaudio.load(str(fp))[0]
 
         waveform_augmented = augmentation(waveform)

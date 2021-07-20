@@ -2,7 +2,7 @@
 
 A deep learning model to predict a subsequent sequence of a Mel-spectrogram.
 
-Also have a look at [https://sagerpascal.github.io/temporal-speech-context/](https://sagerpascal.github.io/temporal-speech-context/)
+Also have a look at [https://sagerpascal.github.io/speech-prediction/](https://sagerpascal.github.io/speech-prediction/)
 
 ## Setup Environment
 The code can be executed in a Docker container. More detailed information about building the container can be found at [docker/README.md](docker/README.md)

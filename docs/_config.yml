@@ -4,7 +4,7 @@ lang: en
 
 # Site settings
 url: https://sagerpascal.github.io/speech-prediction/
-baseurl: /temporal-speech-context
+baseurl: /speech-prediction
 site_author: Pascal Sager
 repo_url: https://github.com/sagerpascal/speech-prediction
 

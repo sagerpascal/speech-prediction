@@ -1,5 +1,5 @@
-title: Temporal Speech Context
-description: A neural network to predict a frame of speech (MFCC) from its predecessor
+title: Speech Prediction
+description: A Deep Learning Model to predict the subsequent frames of Mel-spectrograms
 lang: en
 
 # Site settings

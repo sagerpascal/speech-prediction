@@ -5,7 +5,7 @@ nav_exclude: true
 ---
 
 # Modeling Temporal Features of Speech with Sequence Learners for Frame Predictions
-This is the documentation of the repository [https://github.com/sagerpascal/temporal-speech-context](https://github.com/sagerpascal/temporal-speech-context).
+This is the documentation of the repository [https://github.com/sagerpascal/speech-prediction](https://github.com/sagerpascal/speech-prediction).
 It was created by [Pascal Sager](https://sagerpascal.github.io) as his first project thesis. The project thesis is
 supervised by [Prof. Dr. Thilo Stadelmann](https://stdm.github.io), Director of the Centre for Artificial Intelligence at [ZHAW](https://www.zhaw.ch/en/engineering/institutes-centres/cai/).
 

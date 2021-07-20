@@ -93,4 +93,4 @@ if __name__ == '__main__':
     #                'libri-speech_mel-spectro_train_dB-80.h5')
     # create_h5_file(conf, 'libri-speech-orig-val.csv', 'libri-speech_mel_spectro_metadata_val.csv',
     #                    'libri-speech_mel-spectro_val_dB-80.h5')
-    calc_mean_std('D:/Projekte/temporal-speech-context/data/libri-speech_mel-spectro_train_dB-80.h5')
+    calc_mean_std('/workspace/data_üa/libri-speech_mel-spectro_train_dB-80.h5')

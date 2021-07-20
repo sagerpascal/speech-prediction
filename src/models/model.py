@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_model(conf, device):
+    """ Returns the model according to the run configuration """
+
     print("{} GPU's available".format(torch.cuda.device_count()))
 
     if conf['model']['type'] == 'transformer':

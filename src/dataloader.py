@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 def _get_loader(conf, train_set, val_set, test_set, rank=None):
+    """ Returns the dataloader according to the run configuration """
+
     if "cuda" in conf['device']:
         num_workers = 0 if platform.system() == "Windows" else 8
         pin_memory = True
@@ -91,6 +93,8 @@ def _get_torch_speech_commands(conf, device):
 
 
 def _get_dataset(conf, device, with_waveform):
+    """ Load the dataset according to run configuration """
+
     if conf['data'].get('paths').get(conf['data']['type']) is not None \
             and conf['data'].get('paths').get(conf['data']['type']).get('h5') is not None \
             and not conf['data']['augmentation']['use_augmentation']:
@@ -99,7 +103,8 @@ def _get_dataset(conf, device, with_waveform):
         test_set = AudioDatasetH5(conf, mode='test', with_waveform=with_waveform)
     else:
         if conf['data']['augmentation']['use_augmentation']:
-            logger.info('Using slow dataset (single files instead of h5), because data augmentation not supported for h5 files yet')
+            logger.info(
+                'Using slow dataset (single files instead of h5), because data augmentation not supported for h5 files yet')
         else:
             logger.warning("Using slow dataset (single files instead of h5)")
         train_set = AudioDataset(conf, mode='train', augmentation=get_augmentation(conf))
@@ -123,6 +128,8 @@ def _get_dataset(conf, device, with_waveform):
 
 
 def get_loaders(conf, device, with_waveform=False):
+    """ Returns the dataloader according to the run configuration """
+
     if conf['data']['dataset'] == 'torch-speech-commands':
         return _get_torch_speech_commands(conf, device)
     elif conf['data']['dataset'] == 'timit' or conf['data']['dataset'] == 'vox2' or conf['data'][

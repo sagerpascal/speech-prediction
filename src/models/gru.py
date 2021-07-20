@@ -2,7 +2,9 @@ import torch
 from torch import nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
+
 class Prenet(nn.Module):
+    """ The Pre-Net of the GRU model """
 
     def __init__(self, input_size, conf):
         super(Prenet, self).__init__()
@@ -12,7 +14,6 @@ class Prenet(nn.Module):
 
         input_sizes = [input_size] + [hidden_size] * (num_layers - 1)
         output_sizes = [hidden_size] * num_layers
-
 
         self.layers = nn.ModuleList(
             [self.get_block(in_features=in_size, out_features=out_size, dropout=dropout)
@@ -34,6 +35,7 @@ class Prenet(nn.Module):
 
 
 class Postnet(nn.Module):
+    """ The Post-Net of the GRU model """
 
     def __init__(self, conf, input_size, output_size, out_features_postnet):
         super(Postnet, self).__init__()
@@ -77,6 +79,7 @@ class Postnet(nn.Module):
 
 
 class GRUModel(nn.Module):
+    """ The Main Model """
 
     def __init__(self, conf):
         super(GRUModel, self).__init__()
@@ -163,16 +166,22 @@ class GRUModel(nn.Module):
                 predicted_mel = pr
             else:
                 if predicted_mel is None:
-                    predicted_mel = torch.zeros((pr.shape[0], self.k_frames, self.feature_dim_out), dtype=torch.float32).to('cuda')
-                predicted_mel[:, self.out_features_postnet * cycle:self.out_features_postnet * (cycle + 1), :] = pr.clone()
+                    predicted_mel = torch.zeros((pr.shape[0], self.k_frames, self.feature_dim_out),
+                                                dtype=torch.float32).to('cuda')
+                predicted_mel[:, self.out_features_postnet * cycle:self.out_features_postnet * (cycle + 1),
+                :] = pr.clone()
 
             inputs = inputs.clone()
             if self.conf['masking']['add_metadata']:
                 inputs[:, :-self.out_features_postnet, :] = inputs[:, self.out_features_postnet:, :].clone()
-                inputs[:, -self.out_features_postnet:, :-2] = predicted_mel[:, self.out_features_postnet * cycle:self.out_features_postnet * (cycle + 1), :].clone()
+                inputs[:, -self.out_features_postnet:, :-2] = predicted_mel[:,
+                                                              self.out_features_postnet * cycle:self.out_features_postnet * (
+                                                                      cycle + 1), :].clone()
             else:
                 inputs[:, :-self.out_features_postnet, :] = inputs[:, self.out_features_postnet:, :].clone()
-                inputs[:, -self.out_features_postnet:, :] = predicted_mel[:, self.out_features_postnet * cycle:self.out_features_postnet * (cycle + 1), :].clone()
+                inputs[:, -self.out_features_postnet:, :] = predicted_mel[:,
+                                                            self.out_features_postnet * cycle:self.out_features_postnet * (
+                                                                    cycle + 1), :].clone()
 
         return predicted_mel
 

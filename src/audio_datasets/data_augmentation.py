@@ -1,12 +1,15 @@
 import math
 import random
-import time
 from pathlib import Path
 
 import librosa
 import numpy
 import numpy as np
 import torch
+
+"""
+Implementation of different data augmentation methods
+"""
 
 
 class BaseAugmentation:
@@ -36,6 +39,8 @@ class BaseAugmentation:
 
 
 class ResampleAugmentation(BaseAugmentation):
+    """ Resample the raw waveform """
+
     def __init__(self, conf):
         super().__init__(conf, prob=conf['data']['augmentation']['resample']['prob'])
         self.sampling_rate = conf['data']['transform']['sample_rate']
@@ -44,12 +49,13 @@ class ResampleAugmentation(BaseAugmentation):
 
     def apply_augmentation(self, data):
         factor = random.uniform(self.lower, self.upper)
-        data_aug = librosa.resample(data, self.sampling_rate, target_sr=int(self.sampling_rate*factor))
+        data_aug = librosa.resample(data, self.sampling_rate, target_sr=int(self.sampling_rate * factor))
         return data_aug
 
 
 class PitchAndSpeedAugmentation(BaseAugmentation):
-    """ Resample with linear interpolation """
+    """ Resample the waveform with linear interpolation """
+
     def __init__(self, conf):
         super().__init__(conf, prob=conf['data']['augmentation']['pitch_and_speed']['prob'])
         self.lower = conf['data']['augmentation']['pitch_and_speed']['lower']
@@ -67,6 +73,7 @@ class PitchAndSpeedAugmentation(BaseAugmentation):
 
 
 class ValueAmplificationAugmentation(BaseAugmentation):
+    """ Amplify some random subsequences """
 
     def __init__(self, conf):
         super().__init__(conf, prob=conf['data']['augmentation']['amplification']['prob'])
@@ -74,15 +81,16 @@ class ValueAmplificationAugmentation(BaseAugmentation):
         self.upper = conf['data']['augmentation']['amplification']['upper']
 
     def apply_augmentation(self, data):
-        dyn_change = np.random.uniform(low=self.lower, high=self.upper)
         factors = []
         for i in range(0, data.size, 1000):
-            factors.append(1000*[np.random.uniform(low=self.lower, high=self.upper)])
+            factors.append(1000 * [np.random.uniform(low=self.lower, high=self.upper)])
         factors = np.array(factors).flatten()[:data.size]
         data_aug = data * factors
         return data_aug
 
+
 class AugmentationPipeline:
+    """ Create a pipeline with the existing augmentation methods """
 
     def __init__(self, conf):
         self.conf = conf
@@ -105,7 +113,7 @@ class AugmentationPipeline:
         else:
             # cut out a random sequence
             start_idx = random.randint(0, data.size - size)
-            data_[:] = data[start_idx:start_idx+size]
+            data_[:] = data[start_idx:start_idx + size]
         assert data_.size == size
         data = torch.as_tensor(data_, dtype=torch.float32)
         data = data.unsqueeze(0)
@@ -113,6 +121,7 @@ class AugmentationPipeline:
 
 
 def get_augmentation(conf):
+    """ Returns the augmentation pipeline according to the run configuration """
     if conf['data']['augmentation']['use_augmentation']:
         return AugmentationPipeline(conf)
     else:
@@ -123,23 +132,22 @@ if __name__ == '__main__':
     # test data augmentation
     import torchaudio
     import matplotlib.pyplot as plt
-    import sounddevice as sd
 
     conf = {'data': {'augmentation': {
         'use_augmentation': True,
         'pitch_and_speed': {
-            'prob': .5,  # 1
-            'lower': 0.7,  # .7
-            'upper': 1.3  # 1.3
+            'prob': .5,
+            'lower': 0.7,
+            'upper': 1.3
         },
         'resample': {
-            'prob': .5,  # 1
+            'prob': .5,
             'lower': 0.7,
             'upper': 1.3
         },
         'amplification': {
-            'prob': .8,  # 1
-            'lower': 0.8,  # 0.8
+            'prob': .8,
+            'lower': 0.8,
             'upper': 1.2
         },
     }, 'transform': {'sample_rate': 16000, 'hop_length': 200, 'win_length': 400},

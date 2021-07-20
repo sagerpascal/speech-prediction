@@ -1,7 +1,9 @@
 import math
+import random
+
 import torch
 import torch.nn as nn
-import random
+
 
 class Time2Vec(nn.Module):
     """
@@ -53,6 +55,7 @@ class PositionalEncoding(nn.Module):
 
 
 class CustomTransformer(nn.Transformer):
+    """ Definition of a Transformer Model"""
 
     def __init__(self, conf, device, d_model, nhead, num_encoder_layers, num_decoder_layers):
         super(CustomTransformer, self).__init__(d_model=d_model, nhead=nhead, num_encoder_layers=num_encoder_layers,
@@ -74,7 +77,7 @@ class CustomTransformer(nn.Transformer):
         target[:, 1:, :] = y[:, :-1, :]
 
         if epoch is not None:
-            self.teacher_forcing_ratio = 0.5 - (0.04*epoch)
+            self.teacher_forcing_ratio = 0.5 - (0.04 * epoch)
 
         use_teacher_forcing = True if random.random() < self.teacher_forcing_ratio else False
 
@@ -104,7 +107,7 @@ class CustomTransformer(nn.Transformer):
             return self.out(result)
 
     def predict(self, x, seq_lengths=None):
-        result = torch.ones((x.shape[0], self.k_frames+1, x.shape[2])).to(self.device) * self.start_mask
+        result = torch.ones((x.shape[0], self.k_frames + 1, x.shape[2])).to(self.device) * self.start_mask
         result[:, 0, :] = x[:, -1, :]
         for i in range(self.k_frames):
             with torch.no_grad():
@@ -113,6 +116,6 @@ class CustomTransformer(nn.Transformer):
                 target = self.t_pos_enc(target)
                 pred = super().forward(x.permute(1, 0, 2), target.permute(1, 0, 2))
                 pred = pred.permute(1, 0, 2)
-                result[:, i+1, :] = pred[:, -1, :]
+                result[:, i + 1, :] = pred[:, -1, :]
 
         return self.out(result[:, 1:, :])

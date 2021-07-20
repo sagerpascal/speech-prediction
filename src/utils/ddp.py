@@ -1,12 +1,12 @@
+import datetime
 import os
-import random
 
 import torch.distributed as dist
-import datetime
-
 
 
 def setup(mport, rank, world_size):
+    """ Setup Distributed Data Parallel """
+
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = mport
 
@@ -15,4 +15,5 @@ def setup(mport, rank, world_size):
 
 
 def cleanup():
+    """ Cleanup Distributed Data Parallel """
     dist.destroy_process_group()

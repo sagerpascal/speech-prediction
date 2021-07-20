@@ -26,6 +26,7 @@ class DbMelSpectroTransform:
 
 
 class AudioDataset(Dataset):
+    """ Dataset class for single files """
 
     def __init__(self, conf, mode, df_base_path='audio_datasets/dfs', h5_base_path='/workspace/data_pa/', augmentation=None):
 

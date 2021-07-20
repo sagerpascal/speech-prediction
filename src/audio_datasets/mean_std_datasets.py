@@ -7,6 +7,8 @@ from utils.meter import AverageValueMeter
 from utils.conf_reader import get_config
 import sys
 
+""" Calculate mean and std of a dataset """
+
 conf = get_config()
 df = pd.read_csv('dfs/libri-speech-orig-train.csv')
 lengths = []

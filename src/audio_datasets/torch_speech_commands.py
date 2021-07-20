@@ -1,18 +1,19 @@
 import logging
 import os
-import random
 
 import matplotlib.pyplot as plt
-import torch
 import torchaudio
 from torchaudio.datasets import SPEECHCOMMANDS
-from audio_datasets.preprocessing import get_mfcc_transform, get_frames_preprocess_fn
+
 from audio_datasets.normalization import zero_norm
+from audio_datasets.preprocessing import get_mfcc_transform, get_frames_preprocess_fn
 
 logger = logging.getLogger(__name__)
 
 
 class SubsetSC(SPEECHCOMMANDS):
+    """ Dataset containing the speech command dataset from torch """
+
     def __init__(self, conf, subset: str = None):
 
         if os.path.exists("/"):
@@ -53,7 +54,7 @@ class SubsetSC(SPEECHCOMMANDS):
         waveform, sample_rate, label, speaker_id, utterance_number = super().__getitem__(item)
 
         mfcc = self.mfcc_transform(waveform)
-        mfcc = zero_norm(mfcc, self.mean, self.std) # normalize
+        mfcc = zero_norm(mfcc, self.mean, self.std)  # normalize
         data, target = self.preprocess(mfcc)
 
         return data, target, mfcc, waveform, speaker_id, sample_rate, label, utterance_number

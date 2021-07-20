@@ -3,7 +3,9 @@ import logging
 import sys
 from pathlib import Path
 
+
 def setup_logging():
+    """ Setup the logger """
     logging.basicConfig(filename=Path('logs') / '{}.log'.format(datetime.datetime.now().strftime("%Y-%m-%d %H%M%S")),
                         filemode="w", level=logging.DEBUG)
 

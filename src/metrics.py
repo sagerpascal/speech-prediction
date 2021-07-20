@@ -1,18 +1,4 @@
-from pytorch_lightning.metrics.regression import ExplainedVariance, MeanSquaredError, MeanAbsoluteError
-
-
-class ExplainedVarianceUA(ExplainedVariance):
-    __name__ = 'Explained Variance Uniform Average'
-
-    def __init__(self):
-        super().__init__(multioutput='uniform_average')
-
-
-class ExplainedVarianceVW(ExplainedVariance):
-    __name__ = 'Explained Variance Variance Weighted'
-
-    def __init__(self):
-        super().__init__(multioutput='variance_weighted')
+from pytorch_lightning.metrics.regression import MeanSquaredError, MeanAbsoluteError
 
 
 class MSE(MeanSquaredError):
@@ -24,11 +10,11 @@ class MAE(MeanAbsoluteError):
 
 
 def get_metrics(conf, device):
-    metrics = [#ExplainedVarianceUA(),
-               #ExplainedVarianceVW(),
-               MSE(),
-               MAE(),
-               ]
+    """ Returns the metrics used to evaluate the results """
+    metrics = [
+        MSE(),
+        MAE(),
+    ]
 
     for m in metrics:
         m.to(device)

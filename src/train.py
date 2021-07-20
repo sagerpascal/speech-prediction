@@ -2,27 +2,30 @@ import logging
 import os
 import shutil
 import sys
-from pathlib import Path
-import torch
-import wandb
 import time
+from pathlib import Path
+
+import torch
+import torch.distributed as dist
+import wandb
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
+
 from dataloader import get_loaders
 from losses.loss import get_loss
 from metrics import get_metrics
 from models.model import get_model
 from optimizer import get_optimizer, get_lr
+from utils.ddp import setup, cleanup
 from utils.log import format_logs
 from utils.meter import AverageValueMeter
-from torch.nn.utils import clip_grad_norm_
-from torch.nn.parallel import DistributedDataParallel as DDP
-import torch.distributed as dist
-from utils.ddp import setup, cleanup
 
 logger = logging.getLogger(__name__)
 
 
 class Epoch:
+    """ Superclass for Training and Validation Epochs """
 
     def __init__(self, model, loss, metrics, device, conf, stage_name, verbose=True):
         self.model = model
@@ -47,6 +50,8 @@ class Epoch:
         pass
 
     def run(self, dataloader_, epoch_n):
+        """ Run a epoch """
+
         self.on_epoch_start()
 
         logs = {}
@@ -91,6 +96,7 @@ class Epoch:
 
 
 class TrainEpoch(Epoch):
+    """ A Epoch for Training """
 
     def __init__(self, model, loss, metrics, device, conf, optimizer, verbose=True):
         super().__init__(
@@ -127,6 +133,8 @@ class TrainEpoch(Epoch):
 
 
 class ValidEpoch(Epoch):
+    """ A Epoch for Validation """
+
     def __init__(self, model, loss, metrics, device, conf, verbose=True):
         super().__init__(
             model=model,
@@ -154,13 +162,14 @@ class ValidEpoch(Epoch):
 
 
 def setup_wandb(conf):
+    """ Initialize logging with wandb.ai """
     run = wandb.init(project="{}-{}".format(conf['data']['dataset'], conf['data']['type']), job_type='train')
-    # wandb.run.name = 'n={} k={} s={}'.format(conf['masking']['n_frames'], conf['masking']['k_frames'], conf['masking']['window_shift'])
     wandb.run.save()
     return run
 
 
 def wandb_log_settings(conf, loader_train, loader_val):
+    """ Log the configuration """
     add_logs = {
         'size training set': len(loader_train.dataset),
         'size validation set': len(loader_val.dataset),
@@ -170,6 +179,7 @@ def wandb_log_settings(conf, loader_train, loader_val):
 
 
 def wandb_log_epoch(n_epoch, lr, best_loss, train_logs, valid_logs):
+    """ Log the metrics from an epoch """
     logs = {
         'epoch': n_epoch,
         'learning rate': lr,
@@ -183,6 +193,7 @@ def wandb_log_epoch(n_epoch, lr, best_loss, train_logs, valid_logs):
 
 
 def save_model(model, model_path, model_name, save_wandb=False):
+    """ Save a model on the filesystem and on wandb.ai if available """
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
@@ -205,6 +216,7 @@ def _save_logs(store, logs, mode, rank):
 
 
 def save_logs_in_store(store, rank, train_logs, valid_logs):
+    """ Save the logs in a TCP-Store to synchronize across multiple distributed instances """
     _save_logs(store, train_logs, 'train', rank)
     _save_logs(store, valid_logs, 'valid', rank)
 
@@ -220,12 +232,15 @@ def _get_average_logs(conf, store, logs, mode):
 
 
 def calculate_average_logs(conf, store, train_logs, valid_logs):
+    """ Calculate the average metrics values across multiple distributed instances """
     train_logs_avg = _get_average_logs(conf, store, train_logs, 'train')
     valid_logs_avg = _get_average_logs(conf, store, valid_logs, 'valid')
     return train_logs_avg, valid_logs_avg
 
 
 def train(rank=None, mport=None, store_port=None, world_size=None, conf=None):
+    """ Run the training """
+
     is_main_process = not conf['env']['use_data_parallel'] or conf['env']['use_data_parallel'] and rank == 0
 
     if conf['env']['use_data_parallel']:
@@ -330,7 +345,8 @@ def train(rank=None, mport=None, store_port=None, world_size=None, conf=None):
                 model.load_state_dict(torch.load(filename, map_location=map_location))
 
         if (i + 1) % conf['train']['backup_frequency'] == 0 and is_main_process:
-            model_name = "{}-backup-{}.pth".format(wandb.run.name, i+1) if conf['use_wandb'] else 'model-backup-{}.pth'.format(i+1)
+            model_name = "{}-backup-{}.pth".format(wandb.run.name, i + 1) if conf[
+                'use_wandb'] else 'model-backup-{}.pth'.format(i + 1)
             save_model(model, '/workspace/data_pa/trained_models', model_name, save_wandb=False)
             logger.info("Model saved as backup after {} epochs".format(i))
 

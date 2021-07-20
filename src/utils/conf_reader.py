@@ -1,10 +1,13 @@
-import yaml
 import argparse
-import torch
 from pathlib import Path
+
+import torch
+import yaml
 
 
 def _read_conf_file(name):
+    """ Read the config.yaml file """
+
     base_paths = [Path('configs'), Path('../configs'), Path('src') / 'configs']
 
     for p in base_paths:
@@ -18,6 +21,8 @@ def _read_conf_file(name):
 
 
 def get_config():
+    """ Parse the arguments and merge them with the config file """
+
     conf_file = _read_conf_file('config.yaml')
     conf_file_ds = _read_conf_file(conf_file['data']['config_file'])
 

@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_mfcc_transform(conf):
+    """ Get functions to transform a waveform to a MFCC """
+
     mel_spectro_args = {
         'win_length': conf['data']['transform']['win_length'],
         'hop_length': conf['data']['transform']['hop_length'],
@@ -27,6 +29,8 @@ def get_mfcc_transform(conf):
 
 
 def get_mel_spectro_transform(conf):
+    """ Get functions to transform a waveform to a Mel-Spectrogram """
+
     mel_spectro_transform = torchaudio.transforms.MelSpectrogram(sample_rate=conf['data']['transform']['sample_rate'],
                                                                  win_length=conf['data']['transform']['win_length'],
                                                                  hop_length=conf['data']['transform']['hop_length'],
@@ -39,7 +43,7 @@ def get_mel_spectro_transform(conf):
 
 
 class Preprocess(nn.Module):
-    """ must be a class, otherwise multiprocessing won't work """
+    """ Extract Input and Target from a Sequence (must be a class, otherwise multiprocessing won't work) """
 
     def __init__(self, n_frames, k_frames, start_idx):
         super(Preprocess, self).__init__()
@@ -78,6 +82,7 @@ class Preprocess(nn.Module):
 
 
 class PreprocessEnd(Preprocess):
+    """ Extract the target from the end of a sequence """
 
     def forward_action_too_small(self, frames):
         target_index = frames.shape[2] - self.k_frames
@@ -94,6 +99,7 @@ class PreprocessEnd(Preprocess):
 
 
 class PreprocessBeginning(Preprocess):
+    """ Extract the target from the beginning of a sequence """
 
     def forward_action_too_small(self, frames):
         target = frames.detach().clone()[:, :, :self.k_frames]
@@ -109,6 +115,7 @@ class PreprocessBeginning(Preprocess):
 
 
 class PreprocessCenter(Preprocess):
+    """ Extract the target from the middle of a sequence """
 
     def forward_action_too_small(self, frames):
         # Data: 0 -> n1 and n1+k_frames -> end
@@ -131,6 +138,8 @@ class PreprocessCenter(Preprocess):
 
 
 def get_frames_preprocess_fn(mask_pos, n_frames, k_frames, start_idx):
+    """ Returns a function the extract input and target from sequence """
+
     if mask_pos == 'beginning':
         return PreprocessBeginning(n_frames=n_frames, k_frames=k_frames, start_idx=start_idx)
     elif mask_pos == 'center':

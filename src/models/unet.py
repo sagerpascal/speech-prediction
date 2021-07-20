@@ -1,10 +1,11 @@
 import numpy as np
 import segmentation_models_pytorch as smp
-import torch
 import torch.nn as nn
 
 
 class CustomUnet(smp.UnetPlusPlus):
+    """ Definition of a U-Net++"""
+
     def __init__(self, conf):
         super().__init__(
             encoder_name=conf['model']['unet']['encoder_name'],
@@ -14,7 +15,7 @@ class CustomUnet(smp.UnetPlusPlus):
             in_channels=1,
             classes=1,
         )
-        self.segmentation_head = None # remove (not used)
+        self.segmentation_head = None  # remove (not used)
         assert np.floor(np.log(conf['masking']['n_frames']) / np.log(2)) >= 5  # otherwise encoder is too deep
 
         self.conf = conf
@@ -26,8 +27,3 @@ class CustomUnet(smp.UnetPlusPlus):
         decoder_output = self.decoder(*features)
         decoder_output = self.conv2d(decoder_output)
         return self.out_mapping(decoder_output.squeeze(1).permute(0, 2, 1)).permute(0, 2, 1)
-
-
-
-
-

@@ -1,17 +1,20 @@
 import os
 from pathlib import Path
+
+import librosa
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import librosa
-from dataloader import get_loaders
+import torchaudio
+from sklearn.metrics import mean_squared_error
+
 from audio_datasets.collate import collate_fn_debug
 from audio_datasets.normalization import undo_zero_norm
-from utils.conf_reader import get_config
-import torchaudio
 from audio_datasets.preprocessing import get_mfcc_transform, get_mel_spectro_transform
-from sklearn.metrics import mean_squared_error
+from dataloader import get_loaders
 from losses.loss import SoftDTWWrapper
+from utils.conf_reader import get_config
+
 
 def plot_data_examples(with_waveform):
     """
@@ -108,7 +111,7 @@ def plot_same_text_different_speaker():
         data = transform(waveform[0])
         data = data.squeeze().numpy()
         data = data[:, pad:]
-        data = data[:, :220] # reduce to 220 length
+        data = data[:, :220]  # reduce to 220 length
         data_.append(data)
         if is_mel_spectro:
             data = librosa.power_to_db(data, ref=np.max)
@@ -122,15 +125,14 @@ def plot_same_text_different_speaker():
         print("MSE: {}".format(mean_squared_error(d1, d2)))
         stdw_1_res, stdw_2_res = [], []
         for i in range(6):
-            d1_t = torch.from_numpy(np.expand_dims(d1[:, i*32:(i+1)*32], axis=0)).to('cuda')
-            d2_t = torch.from_numpy(np.expand_dims(d2[:, i*32:(i+1)*32], axis=0)).to('cuda')
+            d1_t = torch.from_numpy(np.expand_dims(d1[:, i * 32:(i + 1) * 32], axis=0)).to('cuda')
+            d2_t = torch.from_numpy(np.expand_dims(d2[:, i * 32:(i + 1) * 32], axis=0)).to('cuda')
             d1_t = d1_t.permute(0, 2, 1)
             d2_t = d2_t.permute(0, 2, 1)
             stdw_1_res.append(sdtw_1(d1_t, d2_t).cpu().numpy())
             stdw_2_res.append(sdtw_2(d1_t, d2_t).cpu().numpy())
         print("Soft-DTW (gamma=1.): {}".format(np.mean(stdw_1_res)))
         print("Soft-DTW (gamma=.1): {}".format(np.mean(stdw_2_res)))
-
 
 
 if __name__ == '__main__':

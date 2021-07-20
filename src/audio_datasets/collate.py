@@ -4,6 +4,9 @@ import torch
 
 logger = logging.getLogger(__name__)
 
+"""
+The collate functions of the dataset
+"""
 
 def pad_seq_3d(batch):
     batch = [item.squeeze(dim=0).permute(1, 0) for item in batch]

@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class AudioDatasetH5(Dataset):
+    """ Dataset class for .h5 files """
 
     def __init__(self, conf, mode, h5_base_path='/workspace/data_pa/', with_waveform=False):
 

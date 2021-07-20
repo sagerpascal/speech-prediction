@@ -35,22 +35,19 @@ best_results_test = {
 }
 
 
-def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_loss=True):
+def calc_baseline(conf, compare_model=False):
+    """ Compare a model with the baselines "reuse last frame as prediction" and use "average value of input as prediction" """
+
     mse_mean = []  # mse for different k if the average of x is predicted
     mse_last = []  # mse for different k, if always the last frame of x is predicted
     mse_model = []  # mse for the prediction of the model
 
-    if use_mse_loss:
-        loss_func = torch.nn.functional.mse_loss
-        loss_name = 'MSE'
-    else:
-        loss_func = get_loss(conf)
-        loss_name = 'MAE'
+    loss_func = get_loss(conf)
+    loss_name = loss_func.__name__
 
     range_k = list(range(1, 33))
     for k_frames in range_k:
         conf['masking']['k_frames'] = k_frames
-        # TODO: check if correct
         if conf['masking']['window_shift'] == 'None':
             conf['masking']['window_shift'] = conf['masking']['n_frames'] + k_frames
         logs = {}
@@ -123,26 +120,9 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_lo
             if 'loss model' in logs:
                 mse_model.append(logs['loss model'])
 
-    print(mse_mean)
-    print(mse_last)  # better for small k (k<10)
-    print(mse_model)
-
     if compare_model:
         plt.plot(range_k, mse_mean, 'bs-', range_k, mse_last, 'g^-', range_k, mse_model, 'ro-')
         plt.legend(['Mean of x', 'Last value of x', 'Model Prediction'])
-    elif plot_best_results:
-        mse_train, mse_train_r, mse_test, mse_test_r = [], [], [], []
-        for k, v in best_results_train.items():
-            mse_train_r.append(k)
-            mse_train.append(v)
-        for k, v in best_results_test.items():
-            mse_test_r.append(k)
-            mse_test.append(v)
-        plt.plot(range_k, mse_mean, 'bs-', range_k, mse_last, 'g^-', mse_train_r, mse_train, 'ro--', mse_test_r,
-                 mse_test, 'ro-')
-        plt.legend(['Mean of x', 'Last value of x', 'Prediction Train', 'Prediction Test'])
-
-
     else:
         plt.plot(range_k, mse_mean, 'bs-', range_k, mse_last, 'g^-')
         plt.legend(['Mean of x', 'Last value of x'])
@@ -167,6 +147,8 @@ def calc_baseline(conf, compare_model=False, plot_best_results=False, use_mse_lo
 
 
 def calc_metrics(conf, loader_test, model, metrics):
+    """ Calculate the metrics of a model on the test-set """
+
     logs = {}
     loss_meter = AverageValueMeter()
     metrics_meters = {metric.__name__: AverageValueMeter() for metric in metrics}
@@ -214,6 +196,8 @@ def calc_metrics(conf, loader_test, model, metrics):
 
 
 def plot_one_predicted_batch(conf, loader_test, model):
+    """ Select a random batch and plot the results """
+
     it_loader_test = iter(loader_test)
     data, target, complete_data_b, waveforms, speakers, sentences, indexes, lengths = next(it_loader_test)
     is_mel_spectro = conf['data']['type'] = 'mel-spectro'
@@ -236,7 +220,6 @@ def plot_one_predicted_batch(conf, loader_test, model):
         if isinstance(y_pred, tuple):
             y_pred = y_pred[0]
 
-
     for i in range(len(waveforms)):
         waveform = waveforms[i]
         complete_data = complete_data_b[i, :, :].squeeze().t().numpy()
@@ -253,7 +236,6 @@ def plot_one_predicted_batch(conf, loader_test, model):
         label_pr = undo_zero_norm(label_pr, mean, std)
 
         if is_mel_spectro:
-            # TODO: cleanup
             # complete_data = librosa.power_to_db(complete_data, ref=np.max)
             # data_x = librosa.power_to_db(data_x, ref=np.max)
             # label_gt = librosa.power_to_db(label_gt, ref=np.max)
@@ -291,6 +273,8 @@ def plot_one_predicted_batch(conf, loader_test, model):
 
 
 def play_audio_files(conf, loader_test, model, with_prediction=True):
+    """ Predict some audio files and play them """
+
     mean = conf['data']['stats'][conf['data']['type']]['train']['mean']
     std = conf['data']['stats'][conf['data']['type']]['train']['std']
 
@@ -363,18 +347,6 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
     original = undo_zero_norm(original, mean, std)
     x = undo_zero_norm(x, mean, std)
     y = undo_zero_norm(y, mean, std)
-
-    # # Just for comparison...
-    # reconstructed_orig = np.zeros((x.shape[0] + y.shape[0], y.shape[1]))
-    # reconstructed_orig[:x.shape[0], :] = x
-    # reconstructed_orig[x.shape[0]:, :] = y
-    # reconstructed_orig = reconstructed_orig.T
-    #
-    # # reconstruct signal from input and prediction
-    # reconstructed = np.zeros((x.shape[0] + y.shape[0], y.shape[1]))
-    # reconstructed[:x.shape[0], :] = x
-    # reconstructed[x.shape[0]:, :] = y_pred
-    # reconstructed = reconstructed.T
 
     reconstructed_orig = np.zeros((x.shape[0] + y.shape[0], x.shape[1]), dtype=np.float)
     reconstructed = np.zeros((x.shape[0] + y.shape[0], x.shape[1]), dtype=np.float)
@@ -451,8 +423,7 @@ def play_audio_files(conf, loader_test, model, with_prediction=True):
 
 
 def evaluate(conf):
-    # if 'load_weights' not in conf or conf['load_weights'] == 'None':
-    #     raise AttributeError("Load a model to run evaluation script (invalid config)")
+    """ Evaluate the model """
 
     conf['env']['world_size'] = 1
     conf['env']['use_data_parallel'] = False

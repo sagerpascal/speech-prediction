@@ -2,10 +2,10 @@ import os
 from pathlib import Path
 
 import h5py
+import numpy as np
 import pandas as pd
 import torchaudio
 from tqdm import tqdm
-import numpy as np
 
 from audio_datasets.helper_mfcc import add_to_file
 from audio_datasets.preprocessing import get_mel_spectro_transform
@@ -13,6 +13,8 @@ from utils.conf_reader import get_config
 
 
 def create_h5_file(conf, orig_fp, meta_fp, h5_name):
+    """ Convert single files to a .h5 file """
+
     base_path = Path('audio_datasets/dfs')
     df = pd.read_csv(base_path / orig_fp)
     mel_spectro_transform = get_mel_spectro_transform(conf).to('cuda')
@@ -64,18 +66,19 @@ def create_h5_file(conf, orig_fp, meta_fp, h5_name):
 
 
 def calc_mean_std(fp):
+    """ Calc Mean and Std of .h5 file """
+
     h5_file = h5py.File(fp, 'r')
     mel_spectros = h5_file['Mel-Spectrogram']
     mean_l, std_l = [], []
     n_buckets = 50
     bucket_size = mel_spectros.shape[2] // n_buckets
     for i in tqdm(range(n_buckets)):
-        start_idx, end_idx = i*bucket_size, (i+1)*bucket_size
+        start_idx, end_idx = i * bucket_size, (i + 1) * bucket_size
         mel_spectros_np = mel_spectros[:, :, start_idx:end_idx]
         mean_l.append(np.mean(mel_spectros_np))
         std_l.append(np.std(mel_spectros_np))
     print("Mel-Spctrogram: AVG={} STD={}".format(np.mean(np.array(mean_l)), np.std(np.array(std_l))))
-
 
 
 if __name__ == '__main__':

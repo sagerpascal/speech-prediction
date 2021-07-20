@@ -23,6 +23,8 @@ class Meter(object):
 
 
 class AverageValueMeter(Meter):
+    """ Meter to calculate a running average """
+
     def __init__(self):
         super(AverageValueMeter, self).__init__()
         self.reset()

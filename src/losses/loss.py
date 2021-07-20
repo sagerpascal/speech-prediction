@@ -6,6 +6,7 @@ from losses.soft_dtw import SoftDTW
 
 
 class SoftDTWWrapper(SoftDTW):
+    """ Soft DTW Losses """
 
     def __init__(self, conf, gamma=1., length=None, dist_func=SoftDTW._abs_dist_func):
         super().__init__(use_cuda=conf['device'] == "cuda", gamma=gamma, normalize=True,
@@ -31,6 +32,7 @@ class SoftDTWWrapper(SoftDTW):
 
 
 class WeightedL1Loss(torch.nn.L1Loss):
+    """ L1 loss weighted by distance to known data """
 
     def __init__(self, conf):
         super(WeightedL1Loss, self).__init__(reduction='none')
@@ -64,9 +66,12 @@ class WeightedL1Loss(torch.nn.L1Loss):
 
 
 class AdaptiveLossFunctionWrapper(AdaptiveLossFunction):
+    """ Loss functions which dynamically adjusts its robustness """
 
     def __init__(self, conf):
-        super(AdaptiveLossFunctionWrapper, self).__init__(num_dims=conf['masking']['k_frames']*conf['data']['transform']['n_mels'], float_dtype=torch.float32, device='cuda:0')
+        super(AdaptiveLossFunctionWrapper, self).__init__(
+            num_dims=conf['masking']['k_frames'] * conf['data']['transform']['n_mels'], float_dtype=torch.float32,
+            device='cuda:0')
         self.conf = conf
 
     def forward(self, input, target):
@@ -74,6 +79,7 @@ class AdaptiveLossFunctionWrapper(AdaptiveLossFunction):
 
 
 def get_loss(conf):
+    """ Returns the loss according to the run configuration """
     if conf['train']['loss'] == 'mse':
         return torch.nn.MSELoss()
     elif conf['train']['loss'] == 'mae':

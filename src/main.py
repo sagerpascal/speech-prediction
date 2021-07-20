@@ -16,7 +16,9 @@ from utils.log import setup_logging
 numba_logger = logging.getLogger('numba')
 numba_logger.setLevel(logging.WARNING)
 
+
 def init():
+    """ Initialize logger, torchaudio and set seeds"""
     setup_logging()
     if platform.system() == "Windows":
         torchaudio.USE_SOUNDFILE_LEGACY_INTERFACE = False
@@ -30,6 +32,7 @@ def init():
 
 
 def main(n_frames=None, k_frames=None, window_shift=None):
+    """ Run training or evaluation according to run configuration """
     logger = logging.getLogger(__name__)
     conf = get_config()
     logger.info(conf)
@@ -62,5 +65,6 @@ def main(n_frames=None, k_frames=None, window_shift=None):
 
 
 if __name__ == '__main__':
+    """ The main method, either to start training or evaluation """
     init()
     main()
